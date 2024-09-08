@@ -7,6 +7,8 @@ local baseplate = workspace:FindFirstChild("Baseplate")
 local camera = workspace.CurrentCamera
 local RunService = game:GetService("RunService")
 
+local isEating = false -- To track if the player is currently eating
+
 -- Enable noclip
 local function noclip()
     local character = player.Character
@@ -134,7 +136,10 @@ local function manageNeeds()
         local bloxyCola = backpack:FindFirstChild("Bloxy Cola")
         if bloxyCola then
             player.Character.Humanoid:EquipTool(bloxyCola)
+            isEating = true -- Mark as eating
             bloxyCola:Activate() -- Click on screen to use the item once
+            wait(1) -- Wait to simulate the eating action
+            isEating = false -- Mark as done eating
         end
     end
 
@@ -142,7 +147,10 @@ local function manageNeeds()
         local beans = backpack:FindFirstChild("Beans")
         if beans then
             player.Character.Humanoid:EquipTool(beans)
+            isEating = true -- Mark as eating
             beans:Activate() -- Click on screen to use the item once
+            wait(1) -- Wait to simulate the eating action
+            isEating = false -- Mark as done eating
         end
     end
 end
@@ -162,8 +170,8 @@ while true do
     collectFood()
     manageNeeds()
 
-    -- If backpack is full and not picking up food, freeze the player
-    if getBackpackItemCount() == 10 then
+    -- If eating or not picking up food, freeze the player and teleport
+    if isEating or getBackpackItemCount() == 10 then
         freezeAndSetBaseplate()
     end
 
