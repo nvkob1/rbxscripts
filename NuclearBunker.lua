@@ -1,7 +1,6 @@
 local player = game.Players.LocalPlayer
-local playerGui = player:WaitForChild("PlayerGui")
-local backpackUI = playerGui:WaitForChild("Backpack")
-local scrollingFrame = backpackUI:WaitForChild("ScrollingFrame")
+local backpackGui = player:WaitForChild("PlayerGui"):WaitForChild("Backpack"):WaitForChild("ScrollingFrame")
+local backpack = player:WaitForChild("Backpack")
 local thirst = player:WaitForChild("Thirst")
 local hunger = player:WaitForChild("Hunger")
 local baseplate = workspace:FindFirstChild("Baseplate")
@@ -22,18 +21,6 @@ end
 
 -- Connect the noclip function to the RunService
 RunService.Stepped:Connect(noclip)
-
--- Function to count the number of items in the backpack by counting "preset" frames
-local function getBackpackItemCount()
-    local presets = scrollingFrame:GetChildren()
-    local count = 0
-    for _, frame in pairs(presets) do
-        if frame.Name == "preset" then
-            count = count + 1
-        end
-    end
-    return count
-end
 
 -- Function to fire ProximityPrompt and adjust camera to look at the item
 local function fireproximityprompt(ProximityPrompt, Amount, Skip, part)
@@ -58,6 +45,17 @@ local function fireproximityprompt(ProximityPrompt, Amount, Skip, part)
 
     ProximityPrompt.HoldDuration = HoldDuration
     camera.CameraType = Enum.CameraType.Custom -- Reset the camera
+end
+
+-- Function to count how many "preset" frames are in the Backpack ScrollingFrame
+local function getBackpackItemCount()
+    local itemCount = 0
+    for _, frame in pairs(backpackGui:GetChildren()) do
+        if frame.Name == "preset" then
+            itemCount = itemCount + 1
+        end
+    end
+    return itemCount
 end
 
 -- Function to teleport to a random part
@@ -91,23 +89,31 @@ local function teleportToRandomPart(partName)
     end
 end
 
+-- Function to unequip all items and count Beans and Bloxy Cola in the backpack
+local function getBackpackItems()
+    local beansCount, bloxyColaCount = 0, 0
+
+    -- Unequip everything
+    player.Character.Humanoid:UnequipTools()
+
+    for _, item in pairs(backpack:GetChildren()) do
+        if item.Name == "Beans" then
+            beansCount = beansCount + 1
+        elseif item.Name == "Bloxy Cola" then
+            bloxyColaCount = bloxyColaCount + 1
+        end
+    end
+
+    return beansCount, bloxyColaCount
+end
+
 -- Function to check and collect food until there are 5 Beans and 5 Bloxy Cola
 local function collectFood()
     if getBackpackItemCount() >= 10 then
         return -- Exit the function if the backpack is full
     end
 
-    local beansCount, bloxyColaCount = 0, 0
-
-    for _, frame in pairs(scrollingFrame:GetChildren()) do
-        if frame.Name == "preset" then
-            if frame:FindFirstChild("ItemName").Text == "Beans" then
-                beansCount = beansCount + 1
-            elseif frame:FindFirstChild("ItemName").Text == "Bloxy Cola" then
-                bloxyColaCount = bloxyColaCount + 1
-            end
-        end
-    end
+    local beansCount, bloxyColaCount = getBackpackItems()
 
     -- Collect Beans until 5
     while beansCount < 5 do
@@ -125,22 +131,18 @@ end
 -- Function to use food when thirst or hunger is below 70, and eat only one item
 local function manageNeeds()
     if thirst.Value < 70 then
-        for _, frame in pairs(scrollingFrame:GetChildren()) do
-            if frame.Name == "preset" and frame:FindFirstChild("ItemName").Text == "Bloxy Cola" then
-                player.Character.Humanoid:EquipTool(player.Backpack:FindFirstChild("Bloxy Cola"))
-                player.Backpack["Bloxy Cola"]:Activate() -- Click on screen to use the item once
-                break
-            end
+        local bloxyCola = backpack:FindFirstChild("Bloxy Cola")
+        if bloxyCola then
+            player.Character.Humanoid:EquipTool(bloxyCola)
+            bloxyCola:Activate() -- Click on screen to use the item once
         end
     end
 
     if hunger.Value < 70 then
-        for _, frame in pairs(scrollingFrame:GetChildren()) do
-            if frame.Name == "preset" and frame:FindFirstChild("ItemName").Text == "Beans" then
-                player.Character.Humanoid:EquipTool(player.Backpack:FindFirstChild("Beans"))
-                player.Backpack["Beans"]:Activate() -- Click on screen to use the item once
-                break
-            end
+        local beans = backpack:FindFirstChild("Beans")
+        if beans then
+            player.Character.Humanoid:EquipTool(beans)
+            beans:Activate() -- Click on screen to use the item once
         end
     end
 end
