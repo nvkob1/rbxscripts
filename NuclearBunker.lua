@@ -60,7 +60,7 @@ local function getBackpackItemCount()
     return itemCount
 end
 
--- Function to teleport to a random part
+-- Function to teleport to a random part and unfrozen
 local function teleportToRandomPart(partName)
     if getBackpackItemCount() >= 10 then
         return -- Do not pick up if backpack is full
@@ -77,7 +77,11 @@ local function teleportToRandomPart(partName)
     if targetPart and targetPart:IsA("BasePart") then
         local character = player.Character
         if character and character:FindFirstChild("HumanoidRootPart") then
-            character.HumanoidRootPart.CFrame = targetPart.CFrame + Vector3.new(0, 3, 0) -- Teleport above the part
+            -- Unfreeze character
+            character.HumanoidRootPart.Anchored = false
+
+            -- Teleport above the part
+            character.HumanoidRootPart.CFrame = targetPart.CFrame + Vector3.new(0, 3, 0)
 
             -- Fire all ProximityPrompts in the part and make the camera look at the item
             for _, prompt in pairs(targetPart:GetDescendants()) do
