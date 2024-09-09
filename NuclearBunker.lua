@@ -1,4 +1,3 @@
--- Still Developing
 local player = game.Players.LocalPlayer
 local backpackGui = player:WaitForChild("PlayerGui"):WaitForChild("Backpack"):WaitForChild("ScrollingFrame")
 local backpack = player:WaitForChild("Backpack")
@@ -141,6 +140,7 @@ local function manageNeeds()
             bloxyCola:Activate() -- Click on screen to use the item once
             wait(5) -- Wait 5 seconds for drinking Bloxy Cola
             isEating = false -- Mark as done eating
+            wait(1) -- Wait 1 second before resuming pickup
         end
     end
 
@@ -152,6 +152,7 @@ local function manageNeeds()
             beans:Activate() -- Click on screen to use the item once
             wait(11) -- Wait 11 seconds for eating Beans
             isEating = false -- Mark as done eating
+            wait(1) -- Wait 1 second before resuming pickup
         end
     end
 end
