@@ -1,3 +1,5 @@
+-- Made By Kob
+-- Still Developing Maybe have many bug
 local player = game.Players.LocalPlayer
 local backpackGui = player:WaitForChild("PlayerGui"):WaitForChild("Backpack"):WaitForChild("ScrollingFrame")
 local backpack = player:WaitForChild("Backpack")
