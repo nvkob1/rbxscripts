@@ -140,7 +140,6 @@ local function manageNeeds()
             bloxyCola:Activate() -- Click on screen to use the item once
             wait(5) -- Wait 5 seconds for drinking Bloxy Cola
             isEating = false -- Mark as done eating
-            wait(1) -- Wait 1 second before resuming pickup
         end
     end
 
@@ -152,16 +151,20 @@ local function manageNeeds()
             beans:Activate() -- Click on screen to use the item once
             wait(11) -- Wait 11 seconds for eating Beans
             isEating = false -- Mark as done eating
-            wait(1) -- Wait 1 second before resuming pickup
         end
     end
 end
 
--- Function to freeze player and set baseplate transparency
+-- Function to freeze player and set baseplate transparency after teleporting
 local function freezeAndSetBaseplate()
     local character = player.Character
     if character and character:FindFirstChild("HumanoidRootPart") then
-        character.HumanoidRootPart.CFrame = CFrame.new(-42, -43, 74) -- Teleport to specific position
+        -- Teleport to the specific position
+        character.HumanoidRootPart.CFrame = CFrame.new(-42, -43, 74)
+
+        -- Wait for 0.1 seconds before freezing
+        wait(0.1)
+
         baseplate.Transparency = 0.5 -- Set baseplate transparency
         character.HumanoidRootPart.Anchored = true -- Freeze the player
     end
