@@ -6,45 +6,8 @@ local hunger = player:WaitForChild("Hunger")
 local baseplate = workspace:FindFirstChild("Baseplate")
 local camera = workspace.CurrentCamera
 local RunService = game:GetService("RunService")
+
 local isEating = false -- To track if the player is currently eating
-
--- Create Debug GUI
-local function createDebugGUI()
-    local screenGui = Instance.new("ScreenGui")
-    screenGui.Parent = player:WaitForChild("PlayerGui")
-
-    local debugFrame = Instance.new("Frame")
-    debugFrame.Size = UDim2.new(0, 300, 0, 150)
-    debugFrame.Position = UDim2.new(0, 10, 0, 10)
-    debugFrame.BackgroundTransparency = 0.5
-    debugFrame.BackgroundColor3 = Color3.new(0, 0, 0)
-    debugFrame.Parent = screenGui
-
-    local infoLabel = Instance.new("TextLabel")
-    infoLabel.Size = UDim2.new(1, 0, 1, 0)
-    infoLabel.BackgroundTransparency = 1
-    infoLabel.TextColor3 = Color3.new(1, 1, 1)
-    infoLabel.Font = Enum.Font.SourceSans
-    infoLabel.TextSize = 16
-    infoLabel.Text = "Debug Info"
-    infoLabel.TextYAlignment = Enum.TextYAlignment.Top
-    infoLabel.Parent = debugFrame
-
-    return infoLabel
-end
-
-local debugInfoLabel = createDebugGUI()
-
--- Update Debug GUI
-local function updateDebugGUI(action)
-    local beansCount, bloxyColaCount = getBackpackItems()
-    local backpackItemCount = getBackpackItemCount()
-
-    debugInfoLabel.Text = string.format(
-        "Backpack Items: %d\nBeans: %d\nBloxy Cola: %d\nThirst: %d\nHunger: %d\nCurrent Action: %s",
-        backpackItemCount, beansCount, bloxyColaCount, thirst.Value, hunger.Value, action
-    )
-end
 
 -- Enable noclip
 local function noclip()
@@ -58,9 +21,10 @@ local function noclip()
     end
 end
 
+-- Connect the noclip function to the RunService
 RunService.Stepped:Connect(noclip)
 
--- Fire ProximityPrompt and look at item
+-- Function to fire ProximityPrompt and adjust camera to look at the item
 local function fireproximityprompt(ProximityPrompt, Amount, Skip, part)
     assert(ProximityPrompt, "Argument #1 Missing or nil")
     assert(typeof(ProximityPrompt) == "Instance" and ProximityPrompt:IsA("ProximityPrompt"), "Attempted to fire a Value that is not a ProximityPrompt")
@@ -71,6 +35,7 @@ local function fireproximityprompt(ProximityPrompt, Amount, Skip, part)
     end
 
     for i = 1, Amount or 1 do
+        -- Make the camera look at the item
         if part and part:IsA("BasePart") then
             camera.CameraType = Enum.CameraType.Scriptable
             camera.CFrame = CFrame.new(camera.CFrame.Position, part.Position)
@@ -84,7 +49,7 @@ local function fireproximityprompt(ProximityPrompt, Amount, Skip, part)
     camera.CameraType = Enum.CameraType.Custom -- Reset the camera
 end
 
--- Count items in Backpack ScrollingFrame
+-- Function to count how many "Preset" frames are in the Backpack ScrollingFrame
 local function getBackpackItemCount()
     local itemCount = 0
     for _, frame in pairs(backpackGui:GetChildren()) do
@@ -95,7 +60,7 @@ local function getBackpackItemCount()
     return itemCount
 end
 
--- Teleport to a random part
+-- Function to teleport to a random part
 local function teleportToRandomPart(partName)
     if getBackpackItemCount() >= 10 then
         return -- Do not pick up if backpack is full
@@ -114,9 +79,10 @@ local function teleportToRandomPart(partName)
         if character and character:FindFirstChild("HumanoidRootPart") then
             character.HumanoidRootPart.CFrame = targetPart.CFrame + Vector3.new(0, 3, 0) -- Teleport above the part
 
+            -- Fire all ProximityPrompts in the part and make the camera look at the item
             for _, prompt in pairs(targetPart:GetDescendants()) do
                 if prompt:IsA("ProximityPrompt") then
-                    fireproximityprompt(prompt, 1, true, targetPart) -- Fire the ProximityPrompt
+                    fireproximityprompt(prompt, 1, true, targetPart) -- Fire the ProximityPrompt and look at the item
                 end
             end
         end
@@ -125,9 +91,11 @@ local function teleportToRandomPart(partName)
     end
 end
 
--- Unequip everything and count items in backpack
+-- Function to unequip all items and count Beans and Bloxy Cola in the backpack
 local function getBackpackItems()
     local beansCount, bloxyColaCount = 0, 0
+
+    -- Unequip everything
     player.Character.Humanoid:UnequipTools()
 
     for _, item in pairs(backpack:GetChildren()) do
@@ -141,38 +109,37 @@ local function getBackpackItems()
     return beansCount, bloxyColaCount
 end
 
--- Collect food until there are 5 Beans and 5 Bloxy Cola
+-- Function to check and collect food until there are 5 Beans and 5 Bloxy Cola
 local function collectFood()
     if getBackpackItemCount() >= 10 then
-        return -- Exit if backpack is full
+        return -- Exit the function if the backpack is full
     end
 
     local beansCount, bloxyColaCount = getBackpackItems()
 
+    -- Collect Beans until 5
     while beansCount < 5 do
         teleportToRandomPart("Beans")
         beansCount = beansCount + 1
-        updateDebugGUI("Collecting Beans")
     end
 
+    -- Collect Bloxy Cola until 5
     while bloxyColaCount < 5 do
         teleportToRandomPart("Bloxy Cola")
         bloxyColaCount = bloxyColaCount + 1
-        updateDebugGUI("Collecting Bloxy Cola")
     end
 end
 
--- Manage Hunger and Thirst
+-- Function to use food when thirst or hunger is below 70, and eat only one item with specific durations
 local function manageNeeds()
     if thirst.Value < 70 then
         local bloxyCola = backpack:FindFirstChild("Bloxy Cola")
         if bloxyCola then
             player.Character.Humanoid:EquipTool(bloxyCola)
-            isEating = true
-            updateDebugGUI("Drinking Bloxy Cola")
-            bloxyCola:Activate()
-            wait(5) -- Wait for drinking
-            isEating = false
+            isEating = true -- Mark as eating
+            bloxyCola:Activate() -- Click on screen to use the item once
+            wait(5) -- Wait 5 seconds for drinking Bloxy Cola
+            isEating = false -- Mark as done eating
         end
     end
 
@@ -180,23 +147,21 @@ local function manageNeeds()
         local beans = backpack:FindFirstChild("Beans")
         if beans then
             player.Character.Humanoid:EquipTool(beans)
-            isEating = true
-            updateDebugGUI("Eating Beans")
-            beans:Activate()
-            wait(11) -- Wait for eating
-            isEating = false
+            isEating = true -- Mark as eating
+            beans:Activate() -- Click on screen to use the item once
+            wait(11) -- Wait 11 seconds for eating Beans
+            isEating = false -- Mark as done eating
         end
     end
 end
 
--- Freeze player and teleport
+-- Function to freeze player and set baseplate transparency
 local function freezeAndSetBaseplate()
     local character = player.Character
     if character and character:FindFirstChild("HumanoidRootPart") then
-        character.HumanoidRootPart.CFrame = CFrame.new(-42, -43, 74)
-        baseplate.Transparency = 0.5
-        character.HumanoidRootPart.Anchored = true
-        updateDebugGUI("Frozen")
+        character.HumanoidRootPart.CFrame = CFrame.new(-42, -43, 74) -- Teleport to specific position
+        baseplate.Transparency = 0.5 -- Set baseplate transparency
+        character.HumanoidRootPart.Anchored = true -- Freeze the player
     end
 end
 
@@ -205,9 +170,10 @@ while true do
     collectFood()
     manageNeeds()
 
+    -- If eating or not picking up food, freeze the player and teleport
     if isEating or getBackpackItemCount() == 10 then
         freezeAndSetBaseplate()
     end
 
-    wait(0) -- No delay
+    wait(0) -- No delay for item pickup
 end
