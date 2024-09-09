@@ -49,11 +49,11 @@ local function fireproximityprompt(ProximityPrompt, Amount, Skip, part)
     camera.CameraType = Enum.CameraType.Custom -- Reset the camera
 end
 
--- Function to count how many "preset" frames are in the Backpack ScrollingFrame
+-- Function to count how many "Preset" frames are in the Backpack ScrollingFrame
 local function getBackpackItemCount()
     local itemCount = 0
     for _, frame in pairs(backpackGui:GetChildren()) do
-        if frame.Name == "preset" then
+        if frame.Name == "Preset" then
             itemCount = itemCount + 1
         end
     end
