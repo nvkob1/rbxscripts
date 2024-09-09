@@ -1,4 +1,3 @@
--- Not Finished
 local player = game.Players.LocalPlayer
 local backpackGui = player:WaitForChild("PlayerGui"):WaitForChild("Backpack"):WaitForChild("ScrollingFrame")
 local backpack = player:WaitForChild("Backpack")
@@ -131,7 +130,7 @@ local function collectFood()
     end
 end
 
--- Function to use food when thirst or hunger is below 70, and eat only one item
+-- Function to use food when thirst or hunger is below 70, and eat only one item with specific durations
 local function manageNeeds()
     if thirst.Value < 70 then
         local bloxyCola = backpack:FindFirstChild("Bloxy Cola")
@@ -139,7 +138,7 @@ local function manageNeeds()
             player.Character.Humanoid:EquipTool(bloxyCola)
             isEating = true -- Mark as eating
             bloxyCola:Activate() -- Click on screen to use the item once
-            wait(1) -- Wait to simulate the eating action
+            wait(5) -- Wait 5 seconds for drinking Bloxy Cola
             isEating = false -- Mark as done eating
         end
     end
@@ -150,7 +149,7 @@ local function manageNeeds()
             player.Character.Humanoid:EquipTool(beans)
             isEating = true -- Mark as eating
             beans:Activate() -- Click on screen to use the item once
-            wait(1) -- Wait to simulate the eating action
+            wait(11) -- Wait 11 seconds for eating Beans
             isEating = false -- Mark as done eating
         end
     end
