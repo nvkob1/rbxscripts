@@ -5,7 +5,7 @@ if _G.ScriptExecuted then
 end
 
 _G.ScriptExecuted = true
-game.StarterGui:SetCore("SendNotification", {Title = "Notification", Text = "Script Executed!", Duration = 5})
+game.StarterGui:SetCore("SendNotification", {Title = "Notification", Text = "Made by Kob", Duration = 5})
 
 -- Anti-AFK system
 if not _G.AntiAfk then
@@ -28,6 +28,7 @@ local hunger = player.Hunger
 local loadingFrame = player.PlayerGui.Loading.Frame
 local camera = workspace.CurrentCamera
 local RunService = game:GetService("RunService")
+local Humanoid = player.Character and player.Character:FindFirstChild("Humanoid")
 
 local isEating = false
 
@@ -37,6 +38,10 @@ RunService.Stepped:Connect(function()
     if char then
         for _, part in pairs(char:GetDescendants()) do
             if part:IsA("BasePart") then part.CanCollide = false end
+        end
+        -- Always jump if sitting
+        if Humanoid.Sit then
+            Humanoid.Jump = true
         end
     end
 end)
@@ -127,8 +132,10 @@ end
 
 -- Wait for loading screen to finish
 local function waitForLoading()
+    if loadingFrame.BackgroundTransparency ~= 1 then
+        game.StarterGui:SetCore("SendNotification", {Title = "Notification", Text = "Waiting for Loading", Duration = 5})
+    end
     while loadingFrame.BackgroundTransparency ~= 1 do
-        game.StarterGui:SetCore("SendNotification", {Title = "Notification", Text = "Waiting for Loading Screen", Duration = 1})
         wait(1)
     end
 end
