@@ -1,3 +1,25 @@
+-- Check if script was already executed
+if _G.ScriptExecuted then
+    game.StarterGui:SetCore("SendNotification", {Title = "Notification", Text = "You Already Executed!", Duration = 5})
+    return
+end
+
+_G.ScriptExecuted = true
+game.StarterGui:SetCore("SendNotification", {Title = "Notification", Text = "Script Executed!", Duration = 5})
+
+-- Anti-AFK system
+if not _G.AntiAfk then
+    _G.AntiAfk = true
+    game.StarterGui:SetCore("SendNotification", {Title = "Notification", Text = "Anti-Afk Enabled!", Duration = 5})
+    game.Players.LocalPlayer.Idled:connect(function()
+        game:GetService('VirtualUser'):CaptureController()
+        game:GetService('VirtualUser'):ClickButton2(Vector2.new())
+    end)
+else
+    game.StarterGui:SetCore("SendNotification", {Title = "Notification", Text = "You Already Executed!", Duration = 5})
+end
+
+-- Main script begins
 local player = game.Players.LocalPlayer
 local backpackGui = player.PlayerGui.Backpack.ScrollingFrame
 local backpack = player.Backpack
@@ -103,16 +125,24 @@ local function freezePlayer()
     char.HumanoidRootPart.Anchored = true
 end
 
+-- Wait for loading screen to finish
+local function waitForLoading()
+    while loadingFrame.BackgroundTransparency ~= 1 do
+        game.StarterGui:SetCore("SendNotification", {Title = "Notification", Text = "Waiting for Loading Screen", Duration = 1})
+        wait(1)
+    end
+end
+
 -- Main loop
+waitForLoading() -- Wait for loading to finish
+
 while true do
-    if loadingFrame.BackgroundTransparency == 1 then
-        collectFood()
-        manageNeeds()
-        if isEating or getBackpackCount() == 10 then
-            freezePlayer()
-        else
-            player.Character.HumanoidRootPart.Anchored = false
-        end
+    collectFood()
+    manageNeeds()
+    if isEating or getBackpackCount() == 10 then
+        freezePlayer()
+    else
+        player.Character.HumanoidRootPart.Anchored = false
     end
     wait(0)
 end
