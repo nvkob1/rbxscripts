@@ -25,7 +25,7 @@ local function hopServer()
     end
 end
 
--- Check players count in the server (excluding yourself)
-if #Players:GetPlayers() - 1 == minimumPlayers then
+-- Check if the total number of players (including yourself) equals the minimumPlayers
+if #Players:GetPlayers() == minimumPlayers then
     hopServer()
 end
