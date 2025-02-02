@@ -8,19 +8,19 @@ local function findEmptyPad()
                 for _, player in ipairs(game.Players:GetPlayers()) do
                     if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
                         local distance = (pad.Position - player.Character.HumanoidRootPart.Position).Magnitude
-                        if distance < 10 then 
+                        if distance < 10 then -- Adjust distance threshold as needed
                             playersNearby = true
                             break
                         end
                     end
                 end
                 if not playersNearby then
-                    return pad
+                    return pad -- Returns the first empty pad found
                 end
             end
         end
     end
-    return nil 
+    return nil -- No empty pad found
 end
 
 local function fireProximityPrompts()
@@ -32,49 +32,32 @@ local function fireProximityPrompts()
     end
 end
 
-local function moveMouseAndClick(guiObject)
-    local UIS = game:GetService("UserInputService")
-    local pos = guiObject.AbsolutePosition + guiObject.AbsoluteSize / 2
-    UIS.MouseBehavior = Enum.MouseBehavior.Default
-    mousemoverel(pos.X, pos.Y)
-    wait(0.1)
-    mouse1click()
-end
-
-local function scrollFrameToFind(frame, target)
-    local UIS = game:GetService("UserInputService")
-    while not target or not target.Visible do
-        frame.CanvasPosition = frame.CanvasPosition + Vector2.new(0, 50)
-        wait(0.1)
-    end
-    moveMouseAndClick(target)
-end
-
 local function selectSong()
     local player = game.Players.LocalPlayer
     local songSelector = player.PlayerGui.GameUI.Windows.SongSelector
     
     if songSelector and songSelector.Visible then
-        local categoriesFrame = songSelector.Frame.Categories
-        local vsCamelliaButton = categoriesFrame["VS Camellia"]
+        local vsCamelliaButton = songSelector.Frame.Categories["VS Camellia"]
+        local ghostSongButton = songSelector.Frame.Songs.Ghost
+        local maniaButton = songSelector.Frame.Difficulty.Mania
         
-        scrollFrameToFind(categoriesFrame, vsCamelliaButton)
-        print("Clicked VS Camellia Button.")
+        if vsCamelliaButton then
+            vsCamelliaButton:Activate()
+            print("Clicked VS Camellia Button.")
+        end
         
-        local songsFrame = songSelector.Frame.Songs
-        local ghostSongButton = songsFrame.Ghost
+        if ghostSongButton then
+            ghostSongButton:Activate()
+            print("Clicked Ghost Song Button.")
+        end
         
-        scrollFrameToFind(songsFrame, ghostSongButton)
-        print("Clicked Ghost Song Button.")
-        
-        local difficultyFrame = songSelector.Frame.Difficulty
-        local maniaButton = difficultyFrame.Mania
-        
-        scrollFrameToFind(difficultyFrame, maniaButton)
-        print("Clicked Mania Difficulty Button.")
+        if maniaButton then
+            maniaButton:Activate()
+            print("Clicked Mania Difficulty Button.")
+        end
     else
         print("Song Selector not visible, retrying...")
-        main()
+        main() -- Retry from the beginning
     end
 end
 
@@ -88,7 +71,7 @@ function main()
         fireProximityPrompts()
         print("Fired all proximity prompts after delay.")
         
-        wait(0.5)
+        wait(0.5) -- Wait for UI to load
         selectSong()
     else
         print("No empty pad found or unable to teleport.")
