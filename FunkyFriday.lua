@@ -1,7 +1,4 @@
--- Auto Play Script
-loadstring(game:HttpGet("https://raw.githubusercontent.com/Nadir3709/ScriptHub/main/Loader"))()
-
--- Auto Solo
+--  Need Auto play script first before use this
 while true do
 for i,k in pairs(game:GetService("Workspace").Map.Stages:GetDescendants()) do
    if k.Parent.Name == ("Pads") and k.BrickColor.Name == ("Institutional white") then
