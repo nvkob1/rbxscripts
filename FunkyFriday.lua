@@ -8,19 +8,19 @@ local function findEmptyPad()
                 for _, player in ipairs(game.Players:GetPlayers()) do
                     if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
                         local distance = (pad.Position - player.Character.HumanoidRootPart.Position).Magnitude
-                        if distance < 10 then -- Adjust distance threshold as needed
+                        if distance < 10 then 
                             playersNearby = true
                             break
                         end
                     end
                 end
                 if not playersNearby then
-                    return pad -- Returns the first empty pad found
+                    return pad
                 end
             end
         end
     end
-    return nil -- No empty pad found
+    return nil 
 end
 
 local function fireProximityPrompts()
@@ -42,22 +42,22 @@ local function selectSong()
         local maniaButton = songSelector.Frame.Difficulty.Mania
         
         if vsCamelliaButton then
-            vsCamelliaButton:Activate()
+            pcall(function() vsCamelliaButton.MouseButton1Click:Fire() end)
             print("Clicked VS Camellia Button.")
         end
         
         if ghostSongButton then
-            ghostSongButton:Activate()
+            pcall(function() ghostSongButton.MouseButton1Click:Fire() end)
             print("Clicked Ghost Song Button.")
         end
         
         if maniaButton then
-            maniaButton:Activate()
+            pcall(function() maniaButton.MouseButton1Click:Fire() end)
             print("Clicked Mania Difficulty Button.")
         end
     else
         print("Song Selector not visible, retrying...")
-        main() -- Retry from the beginning
+        main()
     end
 end
 
@@ -71,7 +71,7 @@ function main()
         fireProximityPrompts()
         print("Fired all proximity prompts after delay.")
         
-        wait(0.5) -- Wait for UI to load
+        wait(0.5)
         selectSong()
     else
         print("No empty pad found or unable to teleport.")
