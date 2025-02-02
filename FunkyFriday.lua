@@ -33,8 +33,9 @@ local function fireProximityPrompts()
 end
 
 local function waitForSongSelector()
+    wait(2)
     local songSelector = workspace:FindFirstChild("SongSelector")
-    while not songSelector do
+        while not songSelector do
         fireProximityPrompts()
         wait(1)
         songSelector = workspace:FindFirstChild("SongSelector")
