@@ -32,11 +32,22 @@ local function fireProximityPrompts()
     end
 end
 
+local function moveMouseAndClick(guiObject)
+    local UIS = game:GetService("UserInputService")
+    local pos = guiObject.AbsolutePosition + guiObject.AbsoluteSize / 2
+    UIS.MouseBehavior = Enum.MouseBehavior.Default
+    mousemoverel(pos.X, pos.Y)
+    wait(0.1)
+    mouse1click()
+end
+
 local function scrollFrameToFind(frame, target)
+    local UIS = game:GetService("UserInputService")
     while not target or not target.Visible do
         frame.CanvasPosition = frame.CanvasPosition + Vector2.new(0, 50)
         wait(0.1)
     end
+    moveMouseAndClick(target)
 end
 
 local function selectSong()
@@ -48,21 +59,18 @@ local function selectSong()
         local vsCamelliaButton = categoriesFrame["VS Camellia"]
         
         scrollFrameToFind(categoriesFrame, vsCamelliaButton)
-        pcall(function() vsCamelliaButton.MouseButton1Click:Fire() end)
         print("Clicked VS Camellia Button.")
         
         local songsFrame = songSelector.Frame.Songs
         local ghostSongButton = songsFrame.Ghost
         
         scrollFrameToFind(songsFrame, ghostSongButton)
-        pcall(function() ghostSongButton.MouseButton1Click:Fire() end)
         print("Clicked Ghost Song Button.")
         
         local difficultyFrame = songSelector.Frame.Difficulty
         local maniaButton = difficultyFrame.Mania
         
         scrollFrameToFind(difficultyFrame, maniaButton)
-        pcall(function() maniaButton.MouseButton1Click:Fire() end)
         print("Clicked Mania Difficulty Button.")
     else
         print("Song Selector not visible, retrying...")
