@@ -32,29 +32,38 @@ local function fireProximityPrompts()
     end
 end
 
+local function scrollFrameToFind(frame, target)
+    while not target or not target.Visible do
+        frame.CanvasPosition = frame.CanvasPosition + Vector2.new(0, 50)
+        wait(0.1)
+    end
+end
+
 local function selectSong()
     local player = game.Players.LocalPlayer
     local songSelector = player.PlayerGui.GameUI.Windows.SongSelector
     
     if songSelector and songSelector.Visible then
-        local vsCamelliaButton = songSelector.Frame.Categories["VS Camellia"]
-        local ghostSongButton = songSelector.Frame.Songs.Ghost
-        local maniaButton = songSelector.Frame.Difficulty.Mania
+        local categoriesFrame = songSelector.Frame.Categories
+        local vsCamelliaButton = categoriesFrame["VS Camellia"]
         
-        if vsCamelliaButton then
-            pcall(function() vsCamelliaButton.MouseButton1Click:Fire() end)
-            print("Clicked VS Camellia Button.")
-        end
+        scrollFrameToFind(categoriesFrame, vsCamelliaButton)
+        pcall(function() vsCamelliaButton.MouseButton1Click:Fire() end)
+        print("Clicked VS Camellia Button.")
         
-        if ghostSongButton then
-            pcall(function() ghostSongButton.MouseButton1Click:Fire() end)
-            print("Clicked Ghost Song Button.")
-        end
+        local songsFrame = songSelector.Frame.Songs
+        local ghostSongButton = songsFrame.Ghost
         
-        if maniaButton then
-            pcall(function() maniaButton.MouseButton1Click:Fire() end)
-            print("Clicked Mania Difficulty Button.")
-        end
+        scrollFrameToFind(songsFrame, ghostSongButton)
+        pcall(function() ghostSongButton.MouseButton1Click:Fire() end)
+        print("Clicked Ghost Song Button.")
+        
+        local difficultyFrame = songSelector.Frame.Difficulty
+        local maniaButton = difficultyFrame.Mania
+        
+        scrollFrameToFind(difficultyFrame, maniaButton)
+        pcall(function() maniaButton.MouseButton1Click:Fire() end)
+        print("Clicked Mania Difficulty Button.")
     else
         print("Song Selector not visible, retrying...")
         main()
