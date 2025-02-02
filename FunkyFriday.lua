@@ -23,59 +23,24 @@ local function findEmptyPad()
     return nil -- No empty pad found
 end
 
-local function fireProximityPrompts()
-    wait(0.1)
-    for _, v in ipairs(game:GetService("Workspace"):GetDescendants()) do
-        if v:IsA("ProximityPrompt") then
-            fireproximityprompt(v)
-        end
-    end
-end
-
-local function selectSong()
-    local player = game.Players.LocalPlayer
-    local songSelector = player.PlayerGui.GameUI.Windows.SongSelector
+local player = game.Players.LocalPlayer
+local emptyPad = findEmptyPad()
+if emptyPad and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+    player.Character.HumanoidRootPart.CFrame = emptyPad.CFrame
+    print("Teleported to empty pad at:", emptyPad.Position)
     
-    if songSelector and songSelector.Visible then
-        local vsCamelliaButton = songSelector.Frame.Categories["VS Camellia"]
-        local ghostSongButton = songSelector.Frame.Songs.Ghost
-        local maniaButton = songSelector.Frame.Difficulty.Mania
-        
-        if vsCamelliaButton then
-            vsCamelliaButton:Activate()
-            print("Clicked VS Camellia Button.")
+    -- Fire all proximity prompts in the workspace after waiting 0.1 seconds
+    local function fire()
+        wait(0.1)
+        for _, v in ipairs(game:GetService("Workspace"):GetDescendants()) do
+            if v:IsA("ProximityPrompt") then
+                fireproximityprompt(v)
+            end
         end
-        
-        if ghostSongButton then
-            ghostSongButton:Activate()
-            print("Clicked Ghost Song Button.")
-        end
-        
-        if maniaButton then
-            maniaButton:Activate()
-            print("Clicked Mania Difficulty Button.")
-        end
-    else
-        print("Song Selector not visible, retrying...")
-        main() -- Retry from the beginning
     end
+    
+    fire()
+    print("Fired all proximity prompts after delay.")
+else
+    print("No empty pad found or unable to teleport.")
 end
-
-function main()
-    local player = game.Players.LocalPlayer
-    local emptyPad = findEmptyPad()
-    if emptyPad and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-        player.Character.HumanoidRootPart.CFrame = emptyPad.CFrame
-        print("Teleported to empty pad at:", emptyPad.Position)
-        
-        fireProximityPrompts()
-        print("Fired all proximity prompts after delay.")
-        
-        wait(0.5) -- Wait for UI to load
-        selectSong()
-    else
-        print("No empty pad found or unable to teleport.")
-    end
-end
-
-main()
