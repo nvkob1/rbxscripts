@@ -38,11 +38,17 @@ local function selectSong()
     
     if songSelector and songSelector.Visible then
         local vsCamelliaButton = songSelector.Frame.Categories["VS Camellia"]
+        local ghostSongButton = songSelector.Frame.Songs.Ghost
         local maniaButton = songSelector.Frame.Difficulty.Mania
         
         if vsCamelliaButton then
             vsCamelliaButton:Activate()
             print("Clicked VS Camellia Button.")
+        end
+        
+        if ghostSongButton then
+            ghostSongButton:Activate()
+            print("Clicked Ghost Song Button.")
         end
         
         if maniaButton then
