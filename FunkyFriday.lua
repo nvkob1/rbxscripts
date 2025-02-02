@@ -32,7 +32,7 @@ while true do
         
         -- Fire all proximity prompts in the workspace after waiting 0.1 seconds
         local function fire()
-            wait(0.1)
+            wait(0.2)
             for _, v in ipairs(game:GetService("Workspace"):GetDescendants()) do
                 if v:IsA("ProximityPrompt") then
                     fireproximityprompt(v)
