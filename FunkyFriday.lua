@@ -1,5 +1,5 @@
 -- This is auto farm points.
---  Need Auto play script first before use this.
+-- Need Auto play script first before use this.
 while true do
 for i,k in pairs(game:GetService("Workspace").Map.Stages:GetDescendants()) do
    if k.Parent.Name == ("Pads") and k.BrickColor.Name == ("Institutional white") then
