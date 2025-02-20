@@ -3,13 +3,6 @@ local HttpService = game:GetService("HttpService")
 local TeleportService = game:GetService("TeleportService")
 local Players = game:GetService("Players")
 
-local queueteleport = syn and syn.queue_on_teleport or queue_on_teleport or fluxus and fluxus.queue_on_teleport
-if queueteleport then
-	queueteleport(
-		"loadstring(game:HttpGet('https://raw.githubusercontent.com/nvkob1/rbxscripts/refs/heads/main/Forsaken.lua'))()"
-	)
-end
-
 task.spawn(function()
 	pcall(function()
 		game:GetService("ReplicatedStorage").Modules.Network.RemoteEvent:FireServer(
