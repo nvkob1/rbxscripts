@@ -6,7 +6,7 @@ local Players = game:GetService("Players")
 local queueteleport = syn and syn.queue_on_teleport or queue_on_teleport or fluxus and fluxus.queue_on_teleport
 if queueteleport then
 	queueteleport(
-		"loadstring(game:HttpGet('https://raw.githubusercontent.com/ivannetta/ShitScripts/main/PathfindGens.lua'))()"
+		"loadstring(game:HttpGet('https://raw.githubusercontent.com/nvkob1/rbxscripts/refs/heads/main/Forsaken.lua'))()"
 	)
 end
 
@@ -61,39 +61,53 @@ local function teleportToRandomServer()
 	end
 end
 
-local function findGenerators()
+local function findFurthestGenerator()
 	local folder = workspace:FindFirstChild("Map") and workspace.Map:FindFirstChild("Ingame")
 	local map = folder and folder:FindFirstChild("Map")
 	local generators = {}
-	if map then
-		for _, g in ipairs(map:GetChildren()) do
-			if g.Name == "Generator" and g.Progress.Value < 100 then
-				local playersNearby = false
-				for _, player in ipairs(Players:GetPlayers()) do
-					if player ~= Players.LocalPlayer and player:DistanceFromCharacter(g:GetPivot().Position) <= 25 then
-						playersNearby = true
-					end
-				end
-				if not playersNearby then
-					table.insert(generators, g)
-				end
-			end
+
+	if not map then return nil end
+
+	-- Find all valid generators
+	for _, g in ipairs(map:GetChildren()) do
+		if g.Name == "Generator" and g.Progress.Value < 100 then
+			table.insert(generators, g)
 		end
 	end
 
-	table.sort(generators, function(a, b)
-		local player = Players.LocalPlayer
-		local character = player.Character
-		if not character or not character:FindFirstChild("HumanoidRootPart") then
-			return false
-		end
-		local rootPart = character:FindFirstChild("HumanoidRootPart")
-		local aPosition = a:IsA("Model") and a:GetPivot().Position or a.Position
-		local bPosition = b:IsA("Model") and b:GetPivot().Position or b.Position
-		return (aPosition - rootPart.Position).Magnitude < (bPosition - rootPart.Position).Magnitude
-	end)
+	-- Get all Killers
+	local killersFolder = workspace:FindFirstChild("Players") and workspace.Players:FindFirstChild("Killers")
+	local killers = killersFolder and killersFolder:GetChildren() or {}
 
-	return generators
+	-- Function to calculate distance from a generator to all killers
+	local function getMinDistanceToKillers(generator)
+		local generatorPosition = generator:GetPivot().Position
+		local minDistance = math.huge
+		for _, killer in ipairs(killers) do
+			if killer:IsA("Model") and killer.PrimaryPart then
+				local killerPosition = killer.PrimaryPart.Position
+				local distance = (generatorPosition - killerPosition).Magnitude
+				if distance < minDistance then
+					minDistance = distance
+				end
+			end
+		end
+		return minDistance
+	end
+
+	-- Find the generator that is the furthest from all killers
+	local furthestGenerator = nil
+	local maxDistance = 0
+
+	for _, generator in ipairs(generators) do
+		local distance = getMinDistanceToKillers(generator)
+		if distance > maxDistance then
+			maxDistance = distance
+			furthestGenerator = generator
+		end
+	end
+
+	return furthestGenerator
 end
 
 -- Function to Teleport Instead of Walking
@@ -110,51 +124,35 @@ local function TeleportToGenerator(generator)
 end
 
 local function DoAllGenerators()
-	for _, g in ipairs(findGenerators()) do
-		local pathStarted = false
-		for attempt = 1, 3 do
-			local playersNearby = false
-			for _, player in ipairs(Players:GetPlayers()) do
-				if player ~= Players.LocalPlayer and player:DistanceFromCharacter(g:GetPivot().Position) <= 25 then
-					playersNearby = true
-					break
-				end
-			end
-
-			if (Players.LocalPlayer.Character:GetPivot().Position - g:GetPivot().Position).Magnitude > 500 then
-				break
-			end
-
-			if not playersNearby and g:FindFirstChild("Progress") and g.Progress.Value < 100 then
-				g:GetPivot()
-			end
-
-			pathStarted = TeleportToGenerator(g) -- Use teleport instead of pathfinding
-			if pathStarted then
-				break
-			else
-				task.wait(1)
-			end
-		end
-		if pathStarted then
-			task.wait(0.5)
-			local prompt = g:FindFirstChild("Main") and g.Main:FindFirstChild("Prompt")
-			if prompt then
-				fireproximityprompt(prompt)
-			end
-			for i = 1, 6 do
-				if g:FindFirstChild("Remotes") and g.Remotes:FindFirstChild("RE") then
-					g.Remotes.RE:FireServer()
-				end
-				if i < 6 then
-					task.wait(2.5)
-				end
-			end
-		else
+	while true do
+		local generator = findFurthestGenerator()
+		if not generator then
+			teleportToRandomServer()
 			return
 		end
+
+		-- Teleport to the furthest generator
+		local pathStarted = TeleportToGenerator(generator)
+		if not pathStarted then
+			task.wait(1)
+			continue
+		end
+
+		-- Start fixing the generator
+		task.wait(0.5)
+		local prompt = generator:FindFirstChild("Main") and generator.Main:FindFirstChild("Prompt")
+		if prompt then
+			fireproximityprompt(prompt)
+		end
+		for i = 1, 6 do
+			if generator:FindFirstChild("Remotes") and generator.Remotes:FindFirstChild("RE") then
+				generator.Remotes.RE:FireServer()
+			end
+			if i < 6 then
+				task.wait(2.5)
+			end
+		end
 	end
-	teleportToRandomServer()
 end
 
 local function AmIInGameYet()
