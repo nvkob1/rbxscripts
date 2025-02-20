@@ -112,8 +112,17 @@ local function teleportToBestGenerator()
         end
     end
 
-    if bestGenerator then
-        rootPart.CFrame = bestGenerator.Positions.Center.CFrame
+    -- Ensure valid position before teleporting
+    if bestGenerator and bestGenerator:FindFirstChild("Positions") then
+        local center = bestGenerator.Positions:FindFirstChild("Center")
+        if center then
+            print("Teleporting to:", center.Position)
+            rootPart.CFrame = center.CFrame
+        else
+            warn("⚠️ Center position missing!")
+        end
+    else
+        warn("⚠️ No valid generator found for teleport!")
     end
 end
 
@@ -160,7 +169,7 @@ local function fireRE()
             if re and re:IsA("RemoteEvent") then
                 re:FireServer()
                 print("Fired RE at generator:", generator.Name)
-                task.wait(3)
+                task.wait(0.5) -- **Reduced delay for faster switching**
                 return true
             end
         end
@@ -198,10 +207,9 @@ while true do
 
     -- 🔄 Fire RE until it can no longer be fired
     while fireRE() do
-        task.wait(0.5) -- ⏳ **Wait only 0.5 seconds before moving to the next generator**
+        task.wait(0.5) -- **Reduced delay for faster switching**
     end
 
-    -- ✅ **Move to the next generator quickly**
-    print("Finished processing a generator. Moving to the next one...")
-    task.wait(0.5) -- 🔥 **Reduced delay to 0.5 seconds**
+    -- ⏳ Immediately move to next generator (No long delay)
+    print("Finished processing one generator. Moving to the next...")
 end
