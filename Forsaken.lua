@@ -8,6 +8,10 @@ local playerGui = player:FindFirstChild("PlayerGui")
 local killersFolder = workspace.Players.Killers
 local spectatingFolder = workspace.Players.Spectating
 
+-- 🕒 Wait until player enters the game (not in Spectating)
+repeat task.wait(1) until not spectatingFolder:FindFirstChild(player.Name)
+task.wait(4) -- Wait 4 seconds after entering game to ensure everything loads
+
 -- 🌍 Function to find Map
 local function getMap()
     return workspace:FindFirstChild("Map") 
@@ -18,7 +22,7 @@ end
 -- ⚙️ Get all valid generators
 local function getGenerators()
     local map = getMap()
-    if not map then return {} end
+    if not map then return {} end -- Map is missing
 
     local generators = {}
     for _, obj in ipairs(map:GetChildren()) do
@@ -164,22 +168,11 @@ local function fireRE()
     return false
 end
 
--- 🔄 Reset round data
-local function resetRoundData()
-    print("Resetting round data...")
-    task.wait(2) -- Ensure all objects reset
-end
-
 -- 🎮 Main Loop
 while true do
-    -- 🔄 Reset round data ONLY if the player is spectating (new round)
-    if spectatingFolder:FindFirstChild(player.Name) then
-        resetRoundData()
-    end
-
     -- 🌍 Wait for player to enter game (not in Spectating)
     repeat task.wait(1) until not spectatingFolder:FindFirstChild(player.Name)
-    task.wait(4) -- Wait 4 seconds after entering
+    task.wait(4) -- Wait for 4 seconds after entering
 
     -- 📌 Wait for generators to spawn
     local generators = getGenerators()
@@ -205,10 +198,10 @@ while true do
 
     -- 🔄 Fire RE until it can no longer be fired
     while fireRE() do
-        task.wait(0.5)
+        task.wait(0.5) -- ⏳ **Wait only 0.5 seconds before moving to the next generator**
     end
 
-    -- ⏳ Wait only 0.5s before moving to the next generator
-    print("Finished processing all generators. Checking again...")
-    task.wait(0.5)
+    -- ✅ **Move to the next generator quickly**
+    print("Finished processing a generator. Moving to the next one...")
+    task.wait(0.5) -- 🔥 **Reduced delay to 0.5 seconds**
 end
