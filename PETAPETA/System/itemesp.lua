@@ -1,14 +1,12 @@
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
-local Camera = workspace.CurrentCamera
-local ServerFolder = workspace:WaitForChild("Server"):WaitForChild("SpawnedItems")
+local Workspace = game:GetService("Workspace")
 
 local ESPs = {}
 
--- Function to create the ESP for items
-local function CreateItemESP(item)
+local function CreateESP(part)
     local Billboard = Instance.new("BillboardGui")
-    Billboard.Adornee = item
+    Billboard.Adornee = part
     Billboard.Size = UDim2.new(0, 150, 0, 40)
     Billboard.StudsOffset = Vector3.new(0, 3, 0)
     Billboard.AlwaysOnTop = true
@@ -22,52 +20,43 @@ local function CreateItemESP(item)
     TextLabel.TextSize = 18
     TextLabel.Parent = Billboard
 
-    ESPs[item] = {Billboard, TextLabel}
+    ESPs[part] = {Billboard, TextLabel}
 
-    -- Function to update the ESP label with the item name and distance
     local function UpdateESP()
-        if item and item.Parent then
-            local distance = (Camera.CFrame.Position - item.Position).Magnitude
-            TextLabel.Text = string.format("Item: %s | Dist: %.1f", item.Name, distance)
+        if part and part.Parent then
+            local distance = (Workspace.CurrentCamera.CFrame.Position - part.Position).Magnitude
+            TextLabel.Text = string.format("Item: %s | Dist: %.1f", part.Name, distance)
         else
-            ESPs[item] = nil
+            ESPs[part] = nil
         end
     end
 
-    -- Connect to RenderStepped to update ESP continuously
     RunService.RenderStepped:Connect(UpdateESP)
-
-    Billboard.Parent = item
+    Billboard.Parent = part
 end
 
--- Function to remove the ESP for an item
-local function RemoveItemESP(item)
-    if ESPs[item] then
-        ESPs[item][1]:Destroy()
-        ESPs[item] = nil
+local function RemoveESP(part)
+    if ESPs[part] then
+        ESPs[part][1]:Destroy()
+        ESPs[part] = nil
     end
 end
 
--- Main function to monitor the SpawnedItems folder and create ESP for new items
-local function MonitorSpawnedItems()
-    for _, item in pairs(ServerFolder:GetChildren()) do
-        if item:IsA("Model") and not item.Name:match("Zeni") then
-            CreateItemESP(item)
+local function AddItemESPs()
+    for _, item in pairs(workspace.Server.SpawnedItems:GetChildren()) do
+        if not string.find(item.Name, "Zeni") then
+            CreateESP(item)
         end
     end
-
-    -- Watch for new items being added to the folder
-    ServerFolder.ChildAdded:Connect(function(item)
-        if item:IsA("Model") and not item.Name:match("Zeni") then
-            CreateItemESP(item)
-        end
-    end)
-
-    -- Watch for items being removed
-    ServerFolder.ChildRemoved:Connect(function(item)
-        RemoveItemESP(item)
-    end)
 end
 
--- Start monitoring the SpawnedItems folder
-MonitorSpawnedItems()
+workspace.Server.SpawnedItems.ChildAdded:Connect(function(child)
+    if child:IsA("Model") and not string.find(child.Name, "Zeni") then
+        CreateESP(child)
+    end
+end)
+
+workspace.Server.SpawnedItems.ChildRemoved:Connect(RemoveESP)
+
+-- Initialize item ESP for existing items
+AddItemESPs()
