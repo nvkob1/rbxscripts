@@ -1,62 +1,50 @@
-local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
-local Workspace = game:GetService("Workspace")
+local Camera = workspace.CurrentCamera
+local ItemFolder = workspace:WaitForChild("Server"):WaitForChild("SpawnedItems")
 
 local ESPs = {}
 
-local function CreateESP(part)
-    local Billboard = Instance.new("BillboardGui")
-    Billboard.Adornee = part
-    Billboard.Size = UDim2.new(0, 150, 0, 40)
-    Billboard.StudsOffset = Vector3.new(0, 3, 0)
-    Billboard.AlwaysOnTop = true
+local function CreateESP(model)
+	if not model:IsA("Model") or model:FindFirstChildOfClass("BillboardGui") then return end
 
-    local TextLabel = Instance.new("TextLabel")
-    TextLabel.Size = UDim2.new(1, 0, 1, 0)
-    TextLabel.BackgroundTransparency = 1
-    TextLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-    TextLabel.Font = Enum.Font.GothamBold
-    TextLabel.TextScaled = false
-    TextLabel.TextSize = 18
-    TextLabel.Parent = Billboard
+	local Billboard = Instance.new("BillboardGui")
+	Billboard.Adornee = model:FindFirstChildWhichIsA("BasePart")
+	Billboard.Size = UDim2.new(0, 200, 0, 50)
+	Billboard.StudsOffset = Vector3.new(0, 2, 0)
+	Billboard.AlwaysOnTop = true
+	Billboard.Name = "ItemESP"
 
-    ESPs[part] = {Billboard, TextLabel}
+	local Label = Instance.new("TextLabel")
+	Label.Size = UDim2.new(1, 0, 1, 0)
+	Label.BackgroundTransparency = 1
+	Label.TextColor3 = Color3.fromRGB(255, 255, 255)
+	Label.TextStrokeTransparency = 0
+	Label.Text = model.Name
+	Label.TextScaled = true
+	Label.Font = Enum.Font.GothamBold
+	Label.Parent = Billboard
 
-    local function UpdateESP()
-        if part and part.Parent then
-            local distance = (Workspace.CurrentCamera.CFrame.Position - part.Position).Magnitude
-            TextLabel.Text = string.format("Item: %s | Dist: %.1f", part.Name, distance)
-        else
-            ESPs[part] = nil
-        end
-    end
-
-    RunService.RenderStepped:Connect(UpdateESP)
-    Billboard.Parent = part
+	Billboard.Parent = model
+	ESPs[model] = Billboard
 end
 
-local function RemoveESP(part)
-    if ESPs[part] then
-        ESPs[part][1]:Destroy()
-        ESPs[part] = nil
-    end
+local function RemoveESP(model)
+	if ESPs[model] then
+		ESPs[model]:Destroy()
+		ESPs[model] = nil
+	end
 end
 
-local function AddItemESPs()
-    for _, item in pairs(workspace.Server.SpawnedItems:GetChildren()) do
-        if not string.find(item.Name, "Zeni") then
-            CreateESP(item)
-        end
-    end
+for _, model in ipairs(ItemFolder:GetChildren()) do
+	if model:IsA("Model") and not model.Name:lower():find("zeni") then
+		CreateESP(model)
+	end
 end
 
-workspace.Server.SpawnedItems.ChildAdded:Connect(function(child)
-    if child:IsA("Model") and not string.find(child.Name, "Zeni") then
-        CreateESP(child)
-    end
+ItemFolder.ChildAdded:Connect(function(model)
+	if model:IsA("Model") and not model.Name:lower():find("zeni") then
+		CreateESP(model)
+	end
 end)
 
-workspace.Server.SpawnedItems.ChildRemoved:Connect(RemoveESP)
-
--- Initialize item ESP for existing items
-AddItemESPs()
+ItemFolder.ChildRemoved:Connect(RemoveESP)
