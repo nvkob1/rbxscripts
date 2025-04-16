@@ -1,4 +1,6 @@
 --// PrizzLife, Fixed By Avitxzer/Maythe
+--// https://www.roblox.com/games/155615604/Prison-Life
+--// https://github.com/Avitxzer
 
 Execution_Runtime = tick() 
 PLadmin_Settings = { 
