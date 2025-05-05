@@ -390,7 +390,7 @@ do
     
     Tabs.PETAPETA:AddToggle("NotifyToggle", {
         Title = "PETAPETA Notify",
-        Default = true,
+        Default = false,
         Callback = function(value)
             notifyEnabled = value
         end
