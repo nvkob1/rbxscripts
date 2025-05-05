@@ -739,7 +739,7 @@ local function createMobileToggleButton()
     ToggleGui.Name = "FluentToggleButton"
     ToggleGui.ResetOnSpawn = false
     ToggleGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-    
+
     local ToggleButton = Instance.new("TextButton")
     ToggleButton.Name = "ToggleButton"
     ToggleButton.Size = UDim2.new(0, 40, 0, 40)
@@ -752,33 +752,30 @@ local function createMobileToggleButton()
     ToggleButton.Font = Enum.Font.GothamBold
     ToggleButton.AutoButtonColor = true
     ToggleButton.Parent = ToggleGui
-    
+
     local UICorner = Instance.new("UICorner")
     UICorner.CornerRadius = UDim.new(0.5, 0)
     UICorner.Parent = ToggleButton
-    
-    -- Make the button draggable
+
     local dragging = false
     local dragInput
     local dragStart
     local startPos
-    
-    -- Create a frame to preview where button will be
+
     local dragFrame = Instance.new("Frame")
     dragFrame.Size = ToggleButton.Size
     dragFrame.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
     dragFrame.BackgroundTransparency = 0.5
     dragFrame.Visible = false
     dragFrame.Parent = ToggleGui
-    
+
     local dragFrameCorner = Instance.new("UICorner")
     dragFrameCorner.CornerRadius = UDim.new(0.5, 0)
     dragFrameCorner.Parent = dragFrame
-    
+
     local function updateDrag(input)
         if dragging then
             local delta = input.Position - dragStart
-            -- Update the preview frame position
             dragFrame.Position = UDim2.new(
                 startPos.X.Scale,
                 startPos.X.Offset + delta.X,
@@ -787,35 +784,32 @@ local function createMobileToggleButton()
             )
         end
     end
-    
+
     ToggleButton.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             dragging = true
             dragInput = input
             dragStart = input.Position
             startPos = ToggleButton.Position
-            
-            -- Show preview frame
             dragFrame.Position = ToggleButton.Position
             dragFrame.Visible = true
-            
+
             input.Changed:Connect(function()
                 if input.UserInputState == Enum.UserInputState.End then
                     dragging = false
-                    -- Hide preview and update actual button position
                     dragFrame.Visible = false
                     ToggleButton.Position = dragFrame.Position
                 end
             end)
         end
     end)
-    
+
     ToggleButton.InputChanged:Connect(function(input)
         if input == dragInput and dragging then
             updateDrag(input)
         end
     end)
-    
+
     UserInputService.InputChanged:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
             if dragging then
@@ -823,49 +817,43 @@ local function createMobileToggleButton()
             end
         end
     end)
-    
-    -- Toggle UI when clicked (simulate left control keypress)
-    ToggleButton.MouseButton1Click:Connect(function()
-       -- Visual feedback
-       ToggleButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-       task.delay(0.1, function()
-           ToggleButton.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-       end)
-       
-       -- Simulate LeftControl keypress
-       local leftControl = Enum.KeyCode.LeftControl
-       local downEvent = {
-           KeyCode = leftControl,
-           UserInputType = Enum.UserInputType.Keyboard,
-           UserInputState = Enum.UserInputState.Begin
-       }
-       
-       local upEvent = {
-           KeyCode = leftControl,
-           UserInputType = Enum.UserInputType.Keyboard,
-           UserInputState = Enum.UserInputState.End
-       }
-       
-       -- Fire events to simulate keypress
-       for _, connection in pairs(getconnections(UserInputService.InputBegan)) do
-           connection.Function(downEvent)
-       end
-       
-       task.delay(0.1, function()
-           for _, connection in pairs(getconnections(UserInputService.InputEnded)) do
-               connection.Function(upEvent)
-           end
-       end)
-   end)
-   
-   -- Parent to PlayerGui
-   if game:GetService("Players").LocalPlayer:FindFirstChild("PlayerGui") then
-       ToggleGui.Parent = game:GetService("Players").LocalPlayer.PlayerGui
-   else
-       ToggleGui.Parent = game:GetService("CoreGui")
-   end
-   
-   return ToggleGui
+
+    ToggleButton.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            ToggleButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+            task.delay(0.1, function()
+                ToggleButton.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+            end)
+
+            local leftControl = Enum.KeyCode.LeftControl
+            local downEvent = {
+                KeyCode = leftControl,
+                UserInputType = Enum.UserInputType.Keyboard,
+                UserInputState = Enum.UserInputState.Begin
+            }
+
+            local upEvent = {
+                KeyCode = leftControl,
+                UserInputType = Enum.UserInputType.Keyboard,
+                UserInputState = Enum.UserInputState.End
+            }
+
+            for _, connection in pairs(getconnections(UserInputService.InputBegan)) do
+                connection.Function(downEvent)
+            end
+
+            task.delay(0.1, function()
+                for _, connection in pairs(getconnections(UserInputService.InputEnded)) do
+                    connection.Function(upEvent)
+                end
+            end)
+        end
+    end)
+
+    local player = game:GetService("Players").LocalPlayer
+    ToggleGui.Parent = player:FindFirstChild("PlayerGui") or game:GetService("CoreGui")
+
+    return ToggleGui
 end
 
 -- Create the mobile toggle button
