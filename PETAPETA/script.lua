@@ -10,11 +10,43 @@ local TweenService = game:GetService("TweenService")
 local Camera = workspace.CurrentCamera
 local LocalPlayer = Players.LocalPlayer
 
+local Device;
+function checkDevice()
+    local player = game.Players.LocalPlayer
+    if player then
+        local UserInputService = game:GetService("UserInputService")
+        
+        if UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled then
+            local FeariseToggle = CreateToggle()
+            FeariseToggle.MouseButton1Click:Connect(function()
+                for _, guiObject in ipairs(game:GetService("CoreGui"):GetChildren()) do
+                    if guiObject.Name == "FeariseHub" and guiObject:IsA("ScreenGui") then
+                        for FrameIndex, FrameValue in pairs(guiObject:GetChildren()) do
+                            if FrameValue:IsA("Frame") and FrameValue:FindFirstChild("CanvasGroup") then
+                                FrameValue.Visible = not FrameValue.Visible
+                            end
+                        end
+                    end
+                end
+            end)
+            game:GetService("CoreGui").ChildRemoved:Connect(function(Value)
+                if Value.Name == "FeariseHub" then
+                    FeariseToggle.Parent.Parent:Destroy()
+                end
+            end)
+            Device = UDim2.fromOffset(480, 360)
+        else
+            Device = UDim2.fromOffset(580, 460)
+        end
+    end
+end
+checkDevice()
+
 local Window = Fluent:CreateWindow({
     Title = "PETAPETA",
     SubTitle = "Made by Kob",
     TabWidth = 160,
-    Size = UDim2.fromOffset(580, 460),
+    Size =  Device,
     Acrylic = true,
     Theme = "Dark"
 })
