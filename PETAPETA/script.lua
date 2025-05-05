@@ -729,7 +729,7 @@ InterfaceManager:SetLibrary(Fluent)
 SaveManager:IgnoreThemeSettings()
 SaveManager:SetIgnoreIndexes({})
 InterfaceManager:SetFolder("PETAPETA")
-SaveManager:SetFolder("PETAPETA/settings")
+SaveManager:SetFolder("PETAPETA")
 InterfaceManager:BuildInterfaceSection(Tabs.Settings)
 SaveManager:BuildConfigSection(Tabs.Settings)
 
