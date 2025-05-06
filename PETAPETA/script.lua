@@ -301,11 +301,111 @@ end
 do
     local notifyEnabled = false
     local espEnabled = false
-    local activePetapeta = {}
+    local ESPs = {}
     local petapetaDetected = false
     local autoHideEnabled = false
     
-    local function notifyPetapetaAppeared()
+    local EnemyFolder = workspace:WaitForChild("Client"):WaitForChild("Enemy")
+    
+    local function CreateESP(part)
+        local Billboard = Instance.new("BillboardGui")
+        Billboard.Adornee = part
+        Billboard.Size = UDim2.new(0, 150, 0, 40)
+        Billboard.StudsOffset = Vector3.new(0, 3, 0)
+        Billboard.AlwaysOnTop = true
+
+        local TextLabel = Instance.new("TextLabel")
+        TextLabel.Size = UDim2.new(1, 0, 1, 0)
+        TextLabel.BackgroundTransparency = 1
+        TextLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+        TextLabel.Font = Enum.Font.GothamBold
+        TextLabel.TextScaled = false
+        TextLabel.TextSize = 18
+        TextLabel.Parent = Billboard
+
+        ESPs[part] = {Billboard, TextLabel}
+
+        local function UpdateESP()
+            if part and part.Parent then
+                local distance = (Camera.CFrame.Position - part.Position).Magnitude
+                TextLabel.Text = string.format("Name: ENEMY | Studs: %.1f", distance)
+            else
+                ESPs[part] = nil
+            end
+        end
+
+        RunService.RenderStepped:Connect(UpdateESP)
+        Billboard.Parent = part
+
+        -- Notify user
+        if notifyEnabled and not petapetaDetected then
+            petapetaDetected = true
+            Fluent:Notify({
+                Title = "⚠️ PETAPETA",
+                Content = "PETAPETA has appeared.",
+                Duration = 4
+            })
+            
+            -- Auto hide when PETAPETA appears
+            if autoHideEnabled and not isHiding then
+                hideInCloset()
+            end
+        end
+        
+        warn("Enemy ESP Added: " .. part.Name)
+    end
+
+    local function RemoveESP(part)
+        if ESPs[part] then
+            -- For billboard GUI based ESPs
+            if ESPs[part][1] and ESPs[part][1]:IsA("BillboardGui") then
+                ESPs[part][1]:Destroy() 
+            end
+            
+            -- Notify that PETAPETA vanished
+            if notifyEnabled then
+                Fluent:Notify({
+                    Title = "✅ PETAPETA",
+                    Content = "PETAPETA has vanished.",
+                    Duration = 4
+                })
+            end
+            
+            ESPs[part] = nil
+            
+            -- Check if there are any ESPs left
+            local hasActiveESPs = false
+            for _, _ in pairs(ESPs) do
+                hasActiveESPs = true
+                break
+            end
+            
+            if not hasActiveESPs then
+                petapetaDetected = false
+                -- Reset hiding status
+                isHiding = false
+                currentHideCloset = nil
+            end
+            
+            warn("Enemy ESP Removed: " .. part.Name)
+        end
+    end
+
+    local function addHighlightWithDelay(model)
+        task.wait(0.5) 
+        local newHighlight = Instance.new("Highlight")
+        newHighlight.FillColor = Color3.fromRGB(128, 0, 128) 
+        newHighlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+        newHighlight.FillTransparency = 0.5
+        newHighlight.Parent = model
+        
+        -- Store reference to the highlight for later removal
+        if not ESPs[model] then
+            ESPs[model] = {}
+        end
+        table.insert(ESPs[model], newHighlight)
+        
+        -- Notify user
         if notifyEnabled and not petapetaDetected then
             petapetaDetected = true
             Fluent:Notify({
@@ -320,85 +420,53 @@ do
             end
         end
     end
-    
-    local function notifyPetapetaVanished()
-        if notifyEnabled and petapetaDetected then
-            petapetaDetected = false
-            Fluent:Notify({
-                Title = "✅ PETAPETA",
-                Content = "PETAPETA has vanished.",
-                Duration = 4
-            })
-            
-            -- Reset hiding status
-            isHiding = false
-            currentHideCloset = nil
-        end
-    end
-    
-    local function createPetapetaESP(obj)
-        if activePetapeta[obj] then return end
-        
-        local highlight = Instance.new("Highlight")
-        highlight.FillColor = Color3.fromRGB(128, 0, 255)
-        highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
-        highlight.Adornee = obj
-        highlight.Parent = game.CoreGui
-        activePetapeta[obj] = highlight
-        
-        -- Create ESP for each part in the object
-        if obj:IsA("Model") then
-            for _, part in pairs(obj:GetDescendants()) do
-                if part:IsA("BasePart") then
-                    local partHighlight = Instance.new("Highlight")
-                    partHighlight.FillColor = Color3.fromRGB(255, 0, 0)
-                    partHighlight.OutlineColor = Color3.fromRGB(255, 255, 255)
-                    partHighlight.Adornee = part
-                    partHighlight.Parent = game.CoreGui
-                    activePetapeta[part] = partHighlight
+
+    local function checkAndAddHighlight()
+        local clientFolder = workspace:FindFirstChild("Client")
+        if clientFolder then
+            local enemyFolder = clientFolder:FindFirstChild("Enemy")
+            if enemyFolder then
+                local clientEnemyPart = enemyFolder:FindFirstChild("ClientEnemy")
+                if clientEnemyPart and clientEnemyPart:IsA("Part") then
+                    local enemyModel = clientEnemyPart:FindFirstChild("EnemyModel")
+                    if enemyModel and enemyModel:IsA("Model") and espEnabled then
+                        addHighlightWithDelay(enemyModel)
+                    end
+                    
+                    clientEnemyPart.ChildAdded:Connect(function(model)
+                        if model:IsA("Model") and model.Name == "EnemyModel" and espEnabled then
+                            addHighlightWithDelay(model)
+                        end
+                    end)
                 end
+                
+                enemyFolder.ChildAdded:Connect(function(part)
+                    if part:IsA("Part") and part.Name == "ClientEnemy" then
+                        part.ChildAdded:Connect(function(model)
+                            if model:IsA("Model") and model.Name == "EnemyModel" and espEnabled then
+                                addHighlightWithDelay(model)
+                            end
+                        end)
+                        if part:FindFirstChild("EnemyModel") then
+                            local existingModel = part:FindFirstChild("EnemyModel")
+                            if existingModel:IsA("Model") and espEnabled then
+                                addHighlightWithDelay(existingModel)
+                            end
+                        end
+                    end
+                end)
             end
         end
-        
-        notifyPetapetaAppeared()
     end
     
-    local function removePetapetaESP(obj)
-        local highlight = activePetapeta[obj]
-        if highlight then highlight:Destroy() end
-        activePetapeta[obj] = nil
-        
-        -- Remove ESP for parts as well
-        if obj:IsA("Model") then
-            for _, part in pairs(obj:GetDescendants()) do
-                if activePetapeta[part] then
-                    activePetapeta[part]:Destroy()
-                    activePetapeta[part] = nil
-                end
-            end
+    -- Setup main ESP logic for 2x2x2 parts
+    EnemyFolder.ChildAdded:Connect(function(part)
+        if part:IsA("Part") and part.Size == Vector3.new(2, 2, 2) and espEnabled then
+            CreateESP(part)
         end
-        
-        if next(activePetapeta) == nil then
-            notifyPetapetaVanished()
-        end
-    end
-    
-    local function clearAllESP()
-        for obj, highlight in pairs(activePetapeta) do
-            if highlight then highlight:Destroy() end
-        end
-        table.clear(activePetapeta)
-        petapetaDetected = false
-    end
-    
-    local function addHighlightWithDelay(model)
-        task.wait(0.5)
-        if espEnabled then
-            createPetapetaESP(model)
-        else
-            notifyPetapetaAppeared()
-        end
-    end
+    end)
+
+    EnemyFolder.ChildRemoved:Connect(RemoveESP)
     
     Tabs.PETAPETA:AddToggle("NotifyToggle", {
         Title = "PETAPETA Notify",
@@ -413,26 +481,35 @@ do
         Default = false,
         Callback = function(value)
             espEnabled = value
-            if not value then
-                clearAllESP()
+            if value then
+                -- Check for existing enemies
+                for _, part in pairs(EnemyFolder:GetChildren()) do
+                    if part:IsA("Part") and part.Size == Vector3.new(2, 2, 2) then
+                        CreateESP(part)
+                    end
+                end
+                
+                -- Check for model-based enemies using the highlight system
+                checkAndAddHighlight()
             else
-                -- Check for existing PETAPETA using new path
-                local ClientFolder = workspace:FindFirstChild("Client")
-                if ClientFolder then
-                    local enemyFolder = ClientFolder:FindFirstChild("Enemy")
-                    if enemyFolder then
-                        for _, part in pairs(enemyFolder:GetChildren()) do
-                            if part:IsA("Part") and part.Size == Vector3.new(2, 2, 2) then
-                                createPetapetaESP(part)
-                            end
-                            if part:IsA("Part") and part.Name == "ClientEnemy" then
-                                if part:FindFirstChild("EnemyModel") and part:FindFirstChild("EnemyModel"):IsA("Model") then
-                                    createPetapetaESP(part:FindFirstChild("EnemyModel"))
-                                end
+                -- Remove all ESPs
+                for part, data in pairs(ESPs) do
+                    if type(data) == "table" then
+                        if data[1] and data[1]:IsA("BillboardGui") then
+                            data[1]:Destroy()
+                        elseif data[1] and data[1]:IsA("Highlight") then
+                            data[1]:Destroy()
+                        end
+                        
+                        for _, item in ipairs(data) do
+                            if item and typeof(item) == "Instance" then
+                                item:Destroy()
                             end
                         end
                     end
                 end
+                table.clear(ESPs)
+                petapetaDetected = false
             end
         end
     })
@@ -445,123 +522,33 @@ do
         end
     })
     
-    local function setupEnemyFolderMonitoring(enemyFolder)
-        -- Monitor parts added to Enemy folder
-        enemyFolder.ChildAdded:Connect(function(part)
-            -- Check for 2x2x2 parts like in Enemy.lua
-            if part:IsA("Part") and part.Size == Vector3.new(2, 2, 2) then
-                if espEnabled then
-                    createPetapetaESP(part)
-                else
-                    notifyPetapetaAppeared()
-                end
-            end
-            
-            -- Check for ClientEnemy parts
-            if part:IsA("Part") and part.Name == "ClientEnemy" then
-                part.ChildAdded:Connect(function(model)
-                    if model:IsA("Model") and model.Name == "EnemyModel" then
-                        if espEnabled then
-                            addHighlightWithDelay(model)
-                        else
-                            notifyPetapetaAppeared()
-                        end
-                    end
-                end)
-                
-                if part:FindFirstChild("EnemyModel") then
-                    local existingModel = part:FindFirstChild("EnemyModel")
-                    if existingModel:IsA("Model") then
-                        if espEnabled then
-                            addHighlightWithDelay(existingModel)
-                        else
-                            notifyPetapetaAppeared()
-                        end
-                    end
-                end
-            end
-        end)
-        
-        -- Monitor parts removed from Enemy folder
-        enemyFolder.ChildRemoved:Connect(function(part)
-            if activePetapeta[part] then
-                removePetapetaESP(part)
-            end
-            
-            if part:IsA("Part") and part.Name == "ClientEnemy" then
-                if part:FindFirstChild("EnemyModel") and activePetapeta[part:FindFirstChild("EnemyModel")] then
-                    removePetapetaESP(part:FindFirstChild("EnemyModel"))
-                end
-            end
-            
-            -- Check if there are no more enemies
-            local foundEnemies = false
-            for _, child in pairs(enemyFolder:GetChildren()) do
-                if (child:IsA("Part") and child.Size == Vector3.new(2, 2, 2)) or 
-                   (child:IsA("Part") and child.Name == "ClientEnemy") then
-                    foundEnemies = true
-                    break
-                end
-            end
-            
-            if not foundEnemies then
-                notifyPetapetaVanished()
-            end
-        end)
-        
-        -- Check for existing PETAPETA
-        for _, part in pairs(enemyFolder:GetChildren()) do
-            if part:IsA("Part") and part.Size == Vector3.new(2, 2, 2) then
-                if espEnabled then
-                    createPetapetaESP(part)
-                else
-                    notifyPetapetaAppeared()
-                end
-            end
-            
-            if part:IsA("Part") and part.Name == "ClientEnemy" then
-                if part:FindFirstChild("EnemyModel") then
-                    local existingModel = part:FindFirstChild("EnemyModel")
-                    if existingModel:IsA("Model") then
-                        if espEnabled then
-                            addHighlightWithDelay(existingModel)
-                        else
-                            notifyPetapetaAppeared()
-                        end
-                    end
-                end
-            end
-        end
-    end
-    
-    local function monitorPetapeta()
-        -- Wait for the Client.Enemy folder
-        local clientFolder = workspace:FindFirstChild("Client")
-        if not clientFolder then
-            -- Set up listener for Client folder to be created
-            workspace.ChildAdded:Connect(function(child)
-                if child:IsA("Folder") and child.Name == "Client" then
-                    child.ChildAdded:Connect(function(subChild)
-                        if subChild:IsA("Folder") and subChild.Name == "Enemy" then
-                            setupEnemyFolderMonitoring(subChild)
+    -- Setup monitoring for workspace/Client structure changes
+    workspace.ChildAdded:Connect(function(child)
+        if child:IsA("Folder") and child.Name == "Client" then
+            child.ChildAdded:Connect(function(subChild)
+                if subChild:IsA("Folder") and subChild.Name == "Enemy" then
+                    subChild.ChildAdded:Connect(function(part)
+                        if part:IsA("Part") and part.Name == "ClientEnemy" then
+                            part.ChildAdded:Connect(function(model)
+                                if model:IsA("Model") and model.Name == "EnemyModel" and espEnabled then
+                                    addHighlightWithDelay(model)
+                                end
+                            end)
+                            if part:FindFirstChild("EnemyModel") then
+                                local existingModel = part:FindFirstChild("EnemyModel")
+                                if existingModel:IsA("Model") and espEnabled then
+                                    addHighlightWithDelay(existingModel)
+                                end
+                            end
                         end
                     end)
-                    
-                    if child:FindFirstChild("Enemy") then
-                        setupEnemyFolderMonitoring(child:FindFirstChild("Enemy"))
-                    end
                 end
             end)
-            return
         end
-        
-        local enemyFolder = clientFolder:FindFirstChild("Enemy") or clientFolder:WaitForChild("Enemy", 30)
-        if not enemyFolder then return end
-        
-        setupEnemyFolderMonitoring(enemyFolder)
-    end
+    end)
     
-    task.spawn(monitorPetapeta)
+    -- Run initial checks
+    checkAndAddHighlight()
 end
 
 -- ESP Closet Feature
