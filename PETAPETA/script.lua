@@ -429,7 +429,7 @@ do
     local function addHighlightWithDelay(model)
         task.wait(0.5) 
         local newHighlight = Instance.new("Highlight")
-        newHighlight.FillColor = Color3.fromRGB(128, 0, 128) -- Purple like in Enemy.lua
+        newHighlight.FillColor = Color3.fromRGB(128, 0, 128) -- Purple Color
         newHighlight.OutlineColor = Color3.fromRGB(255, 255, 255) -- White outline
         newHighlight.FillTransparency = 0.5
         newHighlight.OutlineTransparency = 0
