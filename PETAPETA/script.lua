@@ -307,6 +307,21 @@ do
     
     local EnemyFolder = workspace:WaitForChild("Client"):WaitForChild("Enemy")
     
+    local function hideInCloset()
+        local hideTansu = getClosestEmptyHideTansu()
+        if hideTansu then
+            isHiding = true
+            currentHideCloset = hideTansu
+            
+            local success = tweenToHideTansu(hideTansu)
+            
+            if not success then
+                isHiding = false
+                currentHideCloset = nil
+            end
+        end
+    end
+    
     local function CreateESP(part)
         local Billboard = Instance.new("BillboardGui")
         Billboard.Adornee = part
@@ -348,7 +363,7 @@ do
             
             -- Auto hide when PETAPETA appears
             if autoHideEnabled and not isHiding then
-                hideInCloset()
+                task.spawn(hideInCloset) -- Spawn as separate thread to prevent blocking
             end
         end
         
@@ -382,7 +397,7 @@ do
             
             if not hasActiveESPs then
                 petapetaDetected = false
-                -- Reset hiding status
+                -- Reset hiding status (only if we're out of danger)
                 isHiding = false
                 currentHideCloset = nil
             end
@@ -416,7 +431,7 @@ do
             
             -- Auto hide when PETAPETA appears
             if autoHideEnabled and not isHiding then
-                hideInCloset()
+                task.spawn(hideInCloset) -- Spawn as separate thread to prevent blocking
             end
         end
     end
@@ -519,6 +534,10 @@ do
         Default = false,
         Callback = function(value)
             autoHideEnabled = value
+            -- If enabled and PETAPETA already detected, try hiding immediately
+            if value and petapetaDetected and not isHiding then
+                task.spawn(hideInCloset)
+            end
         end
     })
     
