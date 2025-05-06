@@ -747,11 +747,14 @@ SaveManager:BuildConfigSection(Tabs.Settings)
 
 -- Create mobile toggle button for Fluent UI
 local function createMobileToggleButton()
+    local UserInputService = game:GetService("UserInputService")
+    
     local ToggleGui = Instance.new("ScreenGui")
     ToggleGui.Name = "FluentToggleButton"
     ToggleGui.ResetOnSpawn = false
     ToggleGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-
+    ToggleGui.DisplayOrder = 999999 -- Ensures it's in front of other UIs
+    
     local ToggleButton = Instance.new("TextButton")
     ToggleButton.Name = "ToggleButton"
     ToggleButton.Size = UDim2.new(0, 40, 0, 40)
@@ -763,21 +766,22 @@ local function createMobileToggleButton()
     ToggleButton.TextSize = 14
     ToggleButton.Font = Enum.Font.GothamBold
     ToggleButton.AutoButtonColor = true
+    ToggleButton.ZIndex = 9999 -- High Z-index for button visibility
     ToggleButton.Parent = ToggleGui
-
+    
     local UICorner = Instance.new("UICorner")
     UICorner.CornerRadius = UDim.new(0.5, 0)
     UICorner.Parent = ToggleButton
-
+    
     local dragging = false
     local dragStart
     local startPos
-
+    
     local function updateInput(input)
         local delta = input.Position - dragStart
         ToggleButton.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
     end
-
+    
     ToggleButton.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
             dragging = true
@@ -785,38 +789,51 @@ local function createMobileToggleButton()
             startPos = ToggleButton.Position
         end
     end)
-
+    
     ToggleButton.InputEnded:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
             dragging = false
         end
     end)
-
+    
     UserInputService.InputChanged:Connect(function(input)
         if dragging and (input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseMovement) then
             updateInput(input)
         end
     end)
-
+    
     ToggleButton.MouseButton1Click:Connect(function()
         ToggleButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
         task.delay(0.1, function()
             ToggleButton.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
         end)
-        local downEvent = { KeyCode = Enum.KeyCode.LeftControl, UserInputType = Enum.UserInputType.Keyboard, UserInputState = Enum.UserInputState.Begin }
-        local upEvent = { KeyCode = Enum.KeyCode.LeftControl, UserInputType = Enum.UserInputType.Keyboard, UserInputState = Enum.UserInputState.End }
-        for _, con in pairs(getconnections(UserInputService.InputBegan)) do con.Function(downEvent) end
-        task.delay(0.1, function()
-            for _, con in pairs(getconnections(UserInputService.InputEnded)) do con.Function(upEvent) end
-        end)
+        
+        -- Work for both mobile and PC
+        local isMobile = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
+        
+        if isMobile then
+            -- Direct toggle for mobile
+            local toggleEvent = {Name = "MobileToggleUI", UserInputState = Enum.UserInputState.Begin}
+            for _, con in pairs(getconnections(game:GetService("RunService").Heartbeat)) do 
+                pcall(function() con.Function(toggleEvent) end)
+            end
+        else
+            -- PC behavior with LeftControl simulation
+            local downEvent = {KeyCode = Enum.KeyCode.LeftControl, UserInputType = Enum.UserInputType.Keyboard, UserInputState = Enum.UserInputState.Begin}
+            local upEvent = {KeyCode = Enum.KeyCode.LeftControl, UserInputType = Enum.UserInputType.Keyboard, UserInputState = Enum.UserInputState.End}
+            
+            for _, con in pairs(getconnections(UserInputService.InputBegan)) do con.Function(downEvent) end
+            task.delay(0.1, function()
+                for _, con in pairs(getconnections(UserInputService.InputEnded)) do con.Function(upEvent) end
+            end)
+        end
     end)
-
+    
     local player = game:GetService("Players").LocalPlayer
     ToggleGui.Parent = player:FindFirstChild("PlayerGui") or game:GetService("CoreGui")
     return ToggleGui
 end
 
--- Create the mobile toggle button
 task.spawn(createMobileToggleButton)
 
 Fluent:Notify({
