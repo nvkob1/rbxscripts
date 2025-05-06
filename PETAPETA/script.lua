@@ -214,6 +214,7 @@ local autoHideEnabled = false
 local isHiding = false
 local currentHideCloset = nil
 
+-- Update the getClosestEmptyHideTansu function to properly check if player is hiding
 local function getClosestEmptyHideTansu()
     local character = LocalPlayer.Character
     if not character or not character:FindFirstChild("HumanoidRootPart") then return nil end
@@ -227,17 +228,33 @@ local function getClosestEmptyHideTansu()
             local hidingPlayer = model:FindFirstChild("HidingPlayer")
             local hidePoint = model:FindFirstChild("HidePoint")
             
-            if hidePoint and hidingPlayer and (hidingPlayer.Value == nil) then
-                local distance = (hidePoint.Position - hrp.Position).Magnitude
-                if distance < closestDistance then
-                    closestDistance = distance
-                    closestHideTansu = model
+            if hidePoint and hidingPlayer then
+                -- Check if this closet is available (no player or the current player)
+                if hidingPlayer.Value == nil or (hidingPlayer.Value and hidingPlayer.Value == LocalPlayer) then
+                    local distance = (hidePoint.Position - hrp.Position).Magnitude
+                    if distance < closestDistance then
+                        closestDistance = distance
+                        closestHideTansu = model
+                    end
                 end
             end
         end
     end
     
     return closestHideTansu
+end
+
+local function isPlayerHiding()
+    -- Check if player is already hiding in any closet
+    for _, model in pairs(workspace:GetDescendants()) do
+        if model:IsA("Model") and model.Name == "HideTansu" then
+            local hidingPlayer = model:FindFirstChild("HidingPlayer")
+            if hidingPlayer and hidingPlayer.Value == LocalPlayer then
+                return true, model -- Return true and the hiding closet
+            end
+        end
+    end
+    return false, nil
 end
 
 local function fireAllProximityPrompts(model)
@@ -281,19 +298,31 @@ local function tweenToHideTansu(hideTansu)
 end
 
 local function hideInCloset()
-    if isHiding then return end
+    -- Prevent multiple simultaneous hide attempts
+    if isAttemptingHide then return end
     
+    -- Check if already hiding
+    local alreadyHiding, _ = isPlayerHiding()
+    if alreadyHiding then return end
+    
+    -- Set flag to prevent multiple attempts
+    isAttemptingHide = true
+    
+    -- Get the closest hiding spot
     local hideTansu = getClosestEmptyHideTansu()
     if hideTansu then
-        isHiding = true
-        currentHideCloset = hideTansu
-        
+        -- Try to hide once
         local success = tweenToHideTansu(hideTansu)
         
-        if not success then
-            isHiding = false
-            currentHideCloset = nil
-        end
+        -- Wait a moment before allowing another hide attempt
+        task.delay(5, function()
+            isAttemptingHide = false
+        end)
+    else
+        -- If no hiding spot found, reset flag after a short delay
+        task.delay(2, function()
+            isAttemptingHide = false
+        end)
     end
 end
 
@@ -304,23 +333,9 @@ do
     local ESPs = {}
     local petapetaDetected = false
     local autoHideEnabled = false
-    
     local EnemyFolder = workspace:WaitForChild("Client"):WaitForChild("Enemy")
-    
-    local function hideInCloset()
-        local hideTansu = getClosestEmptyHideTansu()
-        if hideTansu then
-            isHiding = true
-            currentHideCloset = hideTansu
-            
-            local success = tweenToHideTansu(hideTansu)
-            
-            if not success then
-                isHiding = false
-                currentHideCloset = nil
-            end
-        end
-    end
+    local isAttemptingHide = false
+    local lastPetapetaNotifyTime = 0
     
     local function CreateESP(part)
         local Billboard = Instance.new("BillboardGui")
@@ -328,7 +343,7 @@ do
         Billboard.Size = UDim2.new(0, 150, 0, 40)
         Billboard.StudsOffset = Vector3.new(0, 3, 0)
         Billboard.AlwaysOnTop = true
-
+    
         local TextLabel = Instance.new("TextLabel")
         TextLabel.Size = UDim2.new(1, 0, 1, 0)
         TextLabel.BackgroundTransparency = 1
@@ -337,9 +352,9 @@ do
         TextLabel.TextScaled = false
         TextLabel.TextSize = 18
         TextLabel.Parent = Billboard
-
+    
         ESPs[part] = {Billboard, TextLabel}
-
+    
         local function UpdateESP()
             if part and part.Parent then
                 local distance = (Camera.CFrame.Position - part.Position).Magnitude
@@ -348,22 +363,27 @@ do
                 ESPs[part] = nil
             end
         end
-
+    
         RunService.RenderStepped:Connect(UpdateESP)
         Billboard.Parent = part
-
-        -- Notify user
-        if notifyEnabled and not petapetaDetected then
-            petapetaDetected = true
-            Fluent:Notify({
-                Title = "⚠️ PETAPETA",
-                Content = "PETAPETA has appeared.",
-                Duration = 4
-            })
-            
-            -- Auto hide when PETAPETA appears
-            if autoHideEnabled and not isHiding then
-                task.spawn(hideInCloset) -- Spawn as separate thread to prevent blocking
+    
+        -- Notify user (with cooldown to prevent spam)
+        if notifyEnabled then
+            local currentTime = tick()
+            if currentTime - lastPetapetaNotifyTime > 5 then
+                petapetaDetected = true
+                lastPetapetaNotifyTime = currentTime
+                
+                Fluent:Notify({
+                    Title = "⚠️ PETAPETA",
+                    Content = "PETAPETA has appeared.",
+                    Duration = 4
+                })
+                
+                -- Auto hide when PETAPETA appears
+                if autoHideEnabled and not isPlayerHiding() and not isAttemptingHide then
+                    task.spawn(hideInCloset)
+                end
             end
         end
         
@@ -409,9 +429,11 @@ do
     local function addHighlightWithDelay(model)
         task.wait(0.5) 
         local newHighlight = Instance.new("Highlight")
-        newHighlight.FillColor = Color3.fromRGB(128, 0, 128) 
-        newHighlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+        newHighlight.FillColor = Color3.fromRGB(128, 0, 128) -- Purple like in Enemy.lua
+        newHighlight.OutlineColor = Color3.fromRGB(255, 255, 255) -- White outline
         newHighlight.FillTransparency = 0.5
+        newHighlight.OutlineTransparency = 0
+        newHighlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop -- This makes it visible through walls and other highlights
         newHighlight.Parent = model
         
         -- Store reference to the highlight for later removal
@@ -420,18 +442,22 @@ do
         end
         table.insert(ESPs[model], newHighlight)
         
-        -- Notify user
-        if notifyEnabled and not petapetaDetected then
-            petapetaDetected = true
-            Fluent:Notify({
-                Title = "⚠️ PETAPETA",
-                Content = "PETAPETA has appeared.",
-                Duration = 4
-            })
-            
-            -- Auto hide when PETAPETA appears
-            if autoHideEnabled and not isHiding then
-                task.spawn(hideInCloset) -- Spawn as separate thread to prevent blocking
+        -- Notify with cooldown
+        if notifyEnabled then
+            local currentTime = tick()
+            if currentTime - lastPetapetaNotifyTime > 5 then
+                petapetaDetected = true
+                lastPetapetaNotifyTime = currentTime
+                
+                Fluent:Notify({
+                    Title = "⚠️ PETAPETA",
+                    Content = "PETAPETA has appeared.",
+                    Duration = 4
+                })
+                
+                if autoHideEnabled and not isPlayerHiding() and not isAttemptingHide then
+                    task.spawn(hideInCloset)
+                end
             end
         end
     end
@@ -445,7 +471,20 @@ do
                 if clientEnemyPart and clientEnemyPart:IsA("Part") then
                     local enemyModel = clientEnemyPart:FindFirstChild("EnemyModel")
                     if enemyModel and enemyModel:IsA("Model") and espEnabled then
-                        addHighlightWithDelay(enemyModel)
+                        -- Check if highlight already exists before adding
+                        local hasHighlight = false
+                        for _, child in pairs(enemyModel:GetChildren()) do
+                            if child:IsA("Highlight") then
+                                hasHighlight = true
+                                -- Update existing highlight properties
+                                child.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+                                break
+                            end
+                        end
+                        
+                        if not hasHighlight then
+                            addHighlightWithDelay(enemyModel)
+                        end
                     end
                     
                     clientEnemyPart.ChildAdded:Connect(function(model)
@@ -502,6 +541,14 @@ do
                     if part:IsA("Part") and part.Size == Vector3.new(2, 2, 2) then
                         CreateESP(part)
                     end
+                    
+                    -- Check for any ClientEnemy with EnemyModel
+                    if part:IsA("Part") and part.Name == "ClientEnemy" then
+                        local enemyModel = part:FindFirstChild("EnemyModel")
+                        if enemyModel and enemyModel:IsA("Model") then
+                            addHighlightWithDelay(enemyModel)
+                        end
+                    end
                 end
                 
                 -- Check for model-based enemies using the highlight system
@@ -510,12 +557,6 @@ do
                 -- Remove all ESPs
                 for part, data in pairs(ESPs) do
                     if type(data) == "table" then
-                        if data[1] and data[1]:IsA("BillboardGui") then
-                            data[1]:Destroy()
-                        elseif data[1] and data[1]:IsA("Highlight") then
-                            data[1]:Destroy()
-                        end
-                        
                         for _, item in ipairs(data) do
                             if item and typeof(item) == "Instance" then
                                 item:Destroy()
@@ -529,18 +570,27 @@ do
         end
     })
 
+    local petapetaCheckConnection
     Tabs.PETAPETA:AddToggle("AutoHideToggle", {
         Title = "Auto Hide When PETAPETA Spawns",
         Default = false,
         Callback = function(value)
             autoHideEnabled = value
-            -- If enabled and PETAPETA already detected, try hiding immediately
-            if value and petapetaDetected and not isHiding then
+            
+            -- Clean up existing connection
+            if petapetaCheckConnection then
+                petapetaCheckConnection:Disconnect()
+                petapetaCheckConnection = nil
+            end
+            
+            -- No continuous checking - we'll rely on the PETAPETA detection events
+            -- If PETAPETA is already detected when enabling, try hiding once
+            if value and petapetaDetected and not isPlayerHiding() and not isAttemptingHide then
                 task.spawn(hideInCloset)
             end
         end
     })
-    
+        
     -- Setup monitoring for workspace/Client structure changes
     workspace.ChildAdded:Connect(function(child)
         if child:IsA("Folder") and child.Name == "Client" then
