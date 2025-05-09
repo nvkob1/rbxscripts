@@ -814,7 +814,7 @@ local function createMobileToggleButton()
     local ToggleButton = Instance.new("TextButton")
     ToggleButton.Name = "ToggleButton"
     ToggleButton.Size = UDim2.new(0, 40, 0, 40)
-    ToggleButton.Position = UDim2.new(0.05, 0, 0.5, 0)
+    ToggleButton.Position = UDim2.new(0.05, 0, 0.05, 0) -- Now positioned in the upper-left
     ToggleButton.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
     ToggleButton.BorderColor3 = Color3.fromRGB(100, 100, 100)
     ToggleButton.Text = "UI"
