@@ -22,13 +22,19 @@ function checkDevice()
 end
 checkDevice()
 
+-- options.json
+if not isfolder("PETAPETA") then makefolder("PETAPETA") end
+if not isfile("PETAPETA/options.json") then
+    writefile("PETAPETA/options.json", '{"MenuKeybind":"LeftControl","Transparency":false,"Theme":"Amethyst","Acrylic":true}')
+end
+
 local Window = Fluent:CreateWindow({
     Title = "PETAPETA",
     SubTitle = "Made by Kob",
     TabWidth = 160,
     Size =  Device,
     Acrylic = true,
-    Theme = "Amethyst"
+    Theme = "Amethyst",
 })
 
 local Tabs = {
