@@ -28,7 +28,7 @@ local Window = Fluent:CreateWindow({
     TabWidth = 160,
     Size =  Device,
     Acrylic = true,
-    Theme = "Dark"
+    Theme = "Amethyst"
 })
 
 local Tabs = {
