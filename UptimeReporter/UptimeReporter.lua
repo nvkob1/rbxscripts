@@ -264,7 +264,7 @@ local function sendUptime()
   SendButton.Text = "📤 Send Report"
 end
 
-spawn(function()
+task.spawn(function()
   while true do
       TimeLabel.Text = "🕐 Uptime: " .. getUptimeString()
       task.wait(1)
@@ -274,7 +274,7 @@ end)
 SendButton.MouseButton1Click:Connect(sendUptime)
 sendUptime()
 
-spawn(function()
+task.spawn(function()
   while true do
       task.wait(interval)
       sendUptime()
