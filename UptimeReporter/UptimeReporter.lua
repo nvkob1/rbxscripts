@@ -129,8 +129,13 @@ end
 
 local function sendUptime()
    local uptimeString = getUptimeString()
-   local mapName = game:GetService("MarketplaceService"):GetProductInfo(game.PlaceId).Name
+   local mapName = "Unknown"
    local username = Players.LocalPlayer.Name
+   
+   -- Try to get map name, fallback to "Unknown" if failed
+   pcall(function()
+       mapName = game:GetService("MarketplaceService"):GetProductInfo(game.PlaceId).Name
+   end)
    
    local data = {
        embeds = {{
