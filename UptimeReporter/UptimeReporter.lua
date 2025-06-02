@@ -5,6 +5,7 @@ if not getgenv().WEBHOOK_URL then
 end
 
 local webhook = getgenv().WEBHOOK_URL
+local interval = getgenv().WEBHOOK_INTERVAL or 600 -- Default 10 minutes (600 seconds)
 local Players = game:GetService("Players")
 local CoreGui = game:GetService("CoreGui")
 local UserInputService = game:GetService("UserInputService")
@@ -171,10 +172,10 @@ SendButton.MouseButton1Click:Connect(sendUptime)
 -- Send initial notification
 sendUptime()
 
--- Send uptime every 10 minutes
+-- Send uptime with custom interval
 spawn(function()
    while true do
-       wait(600) -- 10 minutes
+       wait(interval)
        sendUptime()
    end
 end)
