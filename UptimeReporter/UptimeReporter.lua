@@ -259,7 +259,7 @@ local function sendUptime()
   
   SendButton.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
   SendButton.Text = "✅ Sent!"
-  wait(1.5)
+  task.wait(1.5)
   SendButton.BackgroundColor3 = Color3.fromRGB(52, 152, 219)
   SendButton.Text = "📤 Send Report"
 end
@@ -267,7 +267,7 @@ end
 spawn(function()
   while true do
       TimeLabel.Text = "🕐 Uptime: " .. getUptimeString()
-      wait(1)
+      task.wait(1)
   end
 end)
 
@@ -276,7 +276,7 @@ sendUptime()
 
 spawn(function()
   while true do
-      wait(interval)
+      task.wait(interval)
       sendUptime()
   end
 end)
