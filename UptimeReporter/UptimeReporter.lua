@@ -1,17 +1,117 @@
--- Webhook Configuration
-if not getgenv().WEBHOOK_URL then
-  warn("No webhook URL configured. Set getgenv().WEBHOOK_URL before running this script.")
-  return
-end
-
-local webhook = getgenv().WEBHOOK_URL
-local interval = getgenv().WEBHOOK_INTERVAL or 600
+-- Webhook Configuration with GUI Input
 local Players = game:GetService("Players")
 local CoreGui = game:GetService("CoreGui")
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 
--- Create GUI
+local webhook = getgenv().WEBHOOK_URL
+local interval = getgenv().WEBHOOK_INTERVAL or 600
+
+-- Webhook Input GUI
+local function createWebhookInputGUI()
+  local InputGui = Instance.new("ScreenGui")
+  local InputFrame = Instance.new("Frame")
+  local InputCorner = Instance.new("UICorner")
+  local InputStroke = Instance.new("UIStroke")
+  local TitleText = Instance.new("TextLabel")
+  local WebhookBox = Instance.new("TextBox")
+  local BoxCorner = Instance.new("UICorner")
+  local ConfirmButton = Instance.new("TextButton")
+  local ButtonCorner = Instance.new("UICorner")
+  local SkipButton = Instance.new("TextButton")
+  local SkipCorner = Instance.new("UICorner")
+  
+  InputGui.Name = "WebhookInput"
+  InputGui.Parent = CoreGui
+  
+  InputFrame.Size = UDim2.new(0, 400, 0, 200)
+  InputFrame.Position = UDim2.new(0.5, -200, 0.5, -100)
+  InputFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+  InputFrame.BorderSizePixel = 0
+  InputFrame.Parent = InputGui
+  
+  InputCorner.CornerRadius = UDim.new(0, 12)
+  InputCorner.Parent = InputFrame
+  
+  InputStroke.Color = Color3.fromRGB(70, 70, 90)
+  InputStroke.Thickness = 2
+  InputStroke.Parent = InputFrame
+  
+  TitleText.Size = UDim2.new(1, -20, 0, 40)
+  TitleText.Position = UDim2.new(0, 10, 0, 10)
+  TitleText.BackgroundTransparency = 1
+  TitleText.Text = "Discord Webhook URL (Optional)"
+  TitleText.TextColor3 = Color3.fromRGB(255, 255, 255)
+  TitleText.TextSize = 16
+  TitleText.Font = Enum.Font.GothamBold
+  TitleText.Parent = InputFrame
+  
+  WebhookBox.Size = UDim2.new(1, -40, 0, 40)
+  WebhookBox.Position = UDim2.new(0, 20, 0, 60)
+  WebhookBox.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+  WebhookBox.BorderSizePixel = 0
+  WebhookBox.Text = ""
+  WebhookBox.PlaceholderText = "Enter Discord webhook URL or leave empty"
+  WebhookBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+  WebhookBox.PlaceholderColor3 = Color3.fromRGB(150, 150, 150)
+  WebhookBox.TextSize = 14
+  WebhookBox.Font = Enum.Font.Gotham
+  WebhookBox.Parent = InputFrame
+  
+  BoxCorner.CornerRadius = UDim.new(0, 8)
+  BoxCorner.Parent = WebhookBox
+  
+  ConfirmButton.Size = UDim2.new(0, 120, 0, 35)
+  ConfirmButton.Position = UDim2.new(0, 20, 0, 120)
+  ConfirmButton.BackgroundColor3 = Color3.fromRGB(52, 152, 219)
+  ConfirmButton.Text = "✅ Confirm"
+  ConfirmButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+  ConfirmButton.TextSize = 14
+  ConfirmButton.Font = Enum.Font.GothamBold
+  ConfirmButton.BorderSizePixel = 0
+  ConfirmButton.Parent = InputFrame
+  
+  ButtonCorner.CornerRadius = UDim.new(0, 8)
+  ButtonCorner.Parent = ConfirmButton
+  
+  SkipButton.Size = UDim2.new(0, 120, 0, 35)
+  SkipButton.Position = UDim2.new(1, -140, 0, 120)
+  SkipButton.BackgroundColor3 = Color3.fromRGB(150, 150, 150)
+  SkipButton.Text = "⏭️ Skip"
+  SkipButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+  SkipButton.TextSize = 14
+  SkipButton.Font = Enum.Font.GothamBold
+  SkipButton.BorderSizePixel = 0
+  SkipButton.Parent = InputFrame
+  
+  SkipCorner.CornerRadius = UDim.new(0, 8)
+  SkipCorner.Parent = SkipButton
+  
+  local finished = false
+  
+  ConfirmButton.MouseButton1Click:Connect(function()
+      local inputText = WebhookBox.Text:gsub("%s+", "")
+      if inputText ~= "" then
+          webhook = inputText
+          getgenv().WEBHOOK_URL = webhook
+      end
+      finished = true
+  end)
+  
+  SkipButton.MouseButton1Click:Connect(function()
+      finished = true
+  end)
+  
+  repeat task.wait() until finished
+  InputGui:Destroy()
+end
+
+-- Show webhook input if not configured
+if not webhook or webhook == "" then
+  createWebhookInputGUI()
+end
+
+-- Create Main GUI
 local ScreenGui = Instance.new("ScreenGui")
 local Frame = Instance.new("Frame")
 local UICorner = Instance.new("UICorner")
@@ -85,7 +185,11 @@ TimeLabel.Parent = Frame
 IntervalLabel.Size = UDim2.new(1, -30, 0, 25)
 IntervalLabel.Position = UDim2.new(0, 15, 0, 85)
 IntervalLabel.BackgroundTransparency = 1
-IntervalLabel.Text = "📤 Auto-send: " .. math.floor(interval/60) .. " min"
+if webhook and webhook ~= "" then
+  IntervalLabel.Text = "📤 Auto-send: " .. math.floor(interval/60) .. " min"
+else
+  IntervalLabel.Text = "⚠️ No webhook configured"
+end
 IntervalLabel.TextColor3 = Color3.fromRGB(150, 150, 170)
 IntervalLabel.TextSize = 13
 IntervalLabel.Font = Enum.Font.Gotham
@@ -93,8 +197,13 @@ IntervalLabel.Parent = Frame
 
 SendButton.Size = UDim2.new(1, -30, 0, 40)
 SendButton.Position = UDim2.new(0, 15, 0, 120)
-SendButton.BackgroundColor3 = Color3.fromRGB(52, 152, 219)
-SendButton.Text = "📤 Send Report"
+if webhook and webhook ~= "" then
+  SendButton.BackgroundColor3 = Color3.fromRGB(52, 152, 219)
+  SendButton.Text = "📤 Send Report"
+else
+  SendButton.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
+  SendButton.Text = "❌ No Webhook"
+end
 SendButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 SendButton.TextSize = 15
 SendButton.Font = Enum.Font.GothamBold
@@ -136,58 +245,30 @@ ToggleButton.MouseButton1Click:Connect(function()
   tween:Play()
 end)
 
--- Hover effects
-SendButton.MouseEnter:Connect(function()
-  local tween = TweenService:Create(SendButton,
-      TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-      {BackgroundColor3 = Color3.fromRGB(70, 170, 240)}
-  )
-  tween:Play()
-end)
-
-SendButton.MouseLeave:Connect(function()
-  if SendButton.Text == "📤 Send Report" then
-      local tween = TweenService:Create(SendButton,
-          TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-          {BackgroundColor3 = Color3.fromRGB(52, 152, 219)}
-      )
-      tween:Play()
-  end
-end)
-
-ToggleButton.MouseEnter:Connect(function()
-  local currentColor = ToggleButton.BackgroundColor3
-  local targetColor = Color3.new(currentColor.R + 0.1, currentColor.G + 0.1, currentColor.B + 0.1)
-  local tween = TweenService:Create(ToggleButton,
-      TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-      {BackgroundColor3 = targetColor}
-  )
-  tween:Play()
-end)
-
-ToggleButton.MouseLeave:Connect(function()
-  local targetColor = isVisible and Color3.fromRGB(70, 70, 90) or Color3.fromRGB(52, 152, 219)
-  local tween = TweenService:Create(ToggleButton,
-      TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-      {BackgroundColor3 = targetColor}
-  )
-  tween:Play()
-end)
-
--- Drag functionality
+-- Enhanced drag functionality for both PC and Mobile
 local dragging = false
 local dragStart = nil
 local startPos = nil
 
+local function getInputPosition(input)
+  if input.UserInputType == Enum.UserInputType.Touch then
+      return input.Position
+  elseif input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.MouseMovement then
+      return input.Position
+  end
+  return Vector3.new()
+end
+
 local function updateInput(input)
-  local delta = input.Position - dragStart
+  local inputPos = getInputPosition(input)
+  local delta = inputPos - dragStart
   Frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
 end
 
 Frame.InputBegan:Connect(function(input)
-  if input.UserInputType == Enum.UserInputType.MouseButton1 then
+  if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
       dragging = true
-      dragStart = input.Position
+      dragStart = getInputPosition(input)
       startPos = Frame.Position
       
       input.Changed:Connect(function()
@@ -199,18 +280,24 @@ Frame.InputBegan:Connect(function(input)
 end)
 
 Frame.InputChanged:Connect(function(input)
-  if input.UserInputType == Enum.UserInputType.MouseMovement then
-      if dragging then
-          updateInput(input)
-      end
+  if (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) and dragging then
+      updateInput(input)
   end
 end)
 
 UserInputService.InputChanged:Connect(function(input)
-  if input.UserInputType == Enum.UserInputType.MouseMovement then
-      if dragging then
-          updateInput(input)
-      end
+  if (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) and dragging then
+      updateInput(input)
+  end
+end)
+
+UserInputService.TouchMoved:Connect(function(touch, gameProcessed)
+  if dragging and not gameProcessed then
+      local input = {
+          UserInputType = Enum.UserInputType.Touch,
+          Position = touch.Position
+      }
+      updateInput(input)
   end
 end)
 
@@ -231,6 +318,10 @@ local function getUptimeString()
 end
 
 local function sendUptime()
+  if not webhook or webhook == "" then
+      return
+  end
+  
   local uptimeString = getUptimeString()
   local mapName = "Unknown"
   local username = Players.LocalPlayer.Name
@@ -271,12 +362,14 @@ task.spawn(function()
   end
 end)
 
-SendButton.MouseButton1Click:Connect(sendUptime)
-sendUptime()
-
-task.spawn(function()
-  while true do
-      task.wait(interval)
-      sendUptime()
-  end
-end)
+if webhook and webhook ~= "" then
+  SendButton.MouseButton1Click:Connect(sendUptime)
+  sendUptime()
+  
+  task.spawn(function()
+      while true do
+          task.wait(interval)
+          sendUptime()
+      end
+  end)
+end
