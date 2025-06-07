@@ -11,7 +11,7 @@ Smart auto farm + server hop bot for **Hide and Seek Extreme**.
 - Auto retries on full/invalid servers
 
 ## How to Use
-1. Run the script in a [Hide and Seek Extreme](https://www.roblox.com/games/205224386/Hide-and-Seek-Extreme).
+1. Put the script in autoexec folder and join the [Hide and Seek Extreme](https://www.roblox.com/games/205224386/Hide-and-Seek-Extreme).
 2. The bot will:
    - Check timer & objects
    - Farm if possible
