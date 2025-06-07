@@ -1,4 +1,4 @@
--- Enhanced Uptime Monitor with Optimizations
+-- Enhanced Uptime Monitor with Executor Detection
 local Players = game:GetService("Players")
 local CoreGui = game:GetService("CoreGui")
 local UserInputService = game:GetService("UserInputService")
@@ -10,6 +10,21 @@ local RunService = game:GetService("RunService")
 local webhook = getgenv().WEBHOOK_URL
 local interval = getgenv().WEBHOOK_INTERVAL or 600
 local startTime = tick()
+
+-- Get executor name
+local function getExecutorName()
+    local success, result = pcall(function()
+        local response = request({
+            Url = "https://httpbin.org/user-agent",
+            Method = "GET",
+        })
+        local data = HttpService:JSONDecode(response.Body)
+        return data["user-agent"] or "Unknown"
+    end)
+    return success and result or "Unknown"
+end
+
+local executorName = getExecutorName()
 
 -- Optimized webhook input GUI
 local function createWebhookInputGUI()
@@ -438,7 +453,7 @@ local function getUptimeString()
     end
 end
 
--- Improved webhook sending with error handling
+-- Improved webhook sending with executor info
 local function sendUptime()
     if not webhook or webhook == "" then return end
     
@@ -450,7 +465,7 @@ local function sendUptime()
         local data = {
             embeds = {{
                 title = "⏱️ Server Uptime Report",
-                description = string.format("**🕐 Current uptime:** %s\n**🗺️ Map:** %s\n**👤 Player:** %s", uptimeString, mapName, username),
+                description = string.format("**🕐 Current uptime:** %s\n**🗺️ Map:** %s\n**👤 Player:** %s\n**⚡ Executor:** %s", uptimeString, mapName, username, executorName),
                 color = 3447003,
                 timestamp = os.date("!%Y-%m-%dT%H:%M:%SZ")
             }}
