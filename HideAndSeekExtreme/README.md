@@ -1,5 +1,12 @@
 # HnS_HopBot
 ```lua
+getgenv().Config = {
+    delayBeforeHop = 2, -- seconds to wait before hopping
+    debug = true, -- enable/disable debug notifications
+    webhook = "", -- optional
+    webhookInterval = 600, -- send status every 10 minutes (0 to disable)
+    notHopIfTimeBelow = 45 -- don't hop if time is below this value
+}
 loadstring(game:HttpGet("https://raw.githubusercontent.com/nvkob1/rbxscripts/refs/heads/main/HideAndSeekExtreme/HnS_HopBot.lua"))()
 ```
 Smart auto farm + server hop bot for **Hide and Seek Extreme**.
