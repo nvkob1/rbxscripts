@@ -1,5 +1,5 @@
 getgenv().ServerHopperConfig = getgenv().ServerHopperConfig or {
-   ["Players Left to Hop"] = 2
+   ["Players Left to Hop"] = 2 -- This includes yourself in the count
 }
 
 local config = getgenv().ServerHopperConfig
