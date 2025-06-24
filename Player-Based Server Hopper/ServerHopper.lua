@@ -1,33 +1,25 @@
-return function(minimumPlayers)
-    local Players = game:GetService("Players")
-    local HttpService = game:GetService("HttpService")
-    local TeleportService = game:GetService("TeleportService")
+getgenv().ServerHopperConfig = getgenv().ServerHopperConfig or {
+   ["Players Left to Hop"] = 2
+}
 
-    -- Function to hop servers
-    local function hopServer()
-        local servers = {}
-        local gameId = game.PlaceId
-        local url = "https://games.roblox.com/v1/games/" .. gameId .. "/servers/Public?sortOrder=Asc&limit=100"
+local config = getgenv().ServerHopperConfig
+local Players = game:GetService("Players")
+local TeleportService = game:GetService("TeleportService")
 
-        local response = HttpService:JSONDecode(game:HttpGet(url))
-
-        if response and response.data then
-            for _, server in pairs(response.data) do
-                if server.playing and server.playing < server.maxPlayers then
-                    table.insert(servers, server.id)
-                end
-            end
-        end
-
-        -- Hop to a random server
-        if #servers > 0 then
-            local serverToJoin = servers[math.random(1, #servers)]
-            TeleportService:TeleportToPlaceInstance(gameId, serverToJoin, Players.LocalPlayer)
-        end
-    end
-
-    -- Check if the total number of players (including yourself) equals the minimumPlayers
-    if #Players:GetPlayers() == minimumPlayers then
-        hopServer()
-    end
+local function serverHop()
+   local servers = game:GetService("HttpService"):JSONDecode(game:HttpGet("https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Asc&limit=100"))
+   
+   for _, server in pairs(servers.data) do
+       if server.playing < server.maxPlayers and server.id ~= game.JobId then
+           TeleportService:TeleportToPlaceInstance(game.PlaceId, server.id)
+           break
+       end
+   end
 end
+
+Players.PlayerRemoving:Connect(function()
+   wait(1)
+   if #Players:GetPlayers() <= config["Players Left to Hop"] then
+       serverHop()
+   end
+end)
