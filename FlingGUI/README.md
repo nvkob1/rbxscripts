@@ -1,6 +1,6 @@
 # Universal Fling GUI
 
-A comprehensive Roblox script that provides various fling methods and protection features.
+A comprehensive Roblox fling script with automatic and manual fling capabilities, protection features, and mobile support.
 
 ## Features
 
@@ -10,17 +10,39 @@ A comprehensive Roblox script that provides various fling methods and protection
 - Click-to-fling tool
 
 ### Manual Fling
-- Standard fling (spin attack)
+- Standard fling toggle
 - Walk fling (fling while walking)
-- Fly fling (flying + fling combo)
+- Fly fling (fly + fling combo)
 
 ### Protection
 - Anti-fling protection
-- Friend protection
-- Custom player protection list
+- Friends protection
+- Protected players list
 
-## Installation
+### Mobile Support
+- Touch-friendly UI
+- Draggable toggle button
+- Mobile fly controls
+
+## Usage
 
 ```lua
 loadstring(game:HttpGet("https://raw.githubusercontent.com/nvkob1/rbxscripts/refs/heads/main/FlingGUI/FlingGUI.lua"))()
 ```
+
+## Controls
+
+**Desktop:**
+- `Left Control` - Toggle GUI
+- `WASD` - Fly movement
+- `Q/E` - Fly up/down
+
+**Mobile:**
+- UI toggle button (draggable)
+- Touch controls for fly mode
+
+## Credits
+
+- Original manual fling by Infinite Yield
+- GUI by nvkob1
+- Uses Fluent UI library
