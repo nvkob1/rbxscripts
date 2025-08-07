@@ -4,9 +4,6 @@ local function createMobileToggleButton()
     local player = Players.LocalPlayer
     local playerGui = player:FindFirstChild("PlayerGui") or game:GetService("CoreGui")
 
-    -- Check if device is mobile
-    local isMobile = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
-
     -- Remove existing button if it exists
     local existingGui = playerGui:FindFirstChild("FluentToggleButton")
     if existingGui then
