@@ -2,7 +2,7 @@
 
 ## Features
 
-- **Auto Save**: Automatically saves settings every 5 seconds
+- **Auto Save**: Automatically saves settings
 - **Manual Save**: Save settings on demand
 - **Account-Specific**: Settings are saved per Roblox user ID
 - **Simple Interface**: Easy-to-use toggle and buttons
