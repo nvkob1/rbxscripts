@@ -10,7 +10,7 @@
 ## Usage
 
 ```lua
-local SaveManager = loadstring(game:HttpGet("your-savemanager-url"))()
+local SaveManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/nvkob1/rbxscripts/refs/heads/main/ModdedFluent/SaveManager.lua"))()
 
 -- Set up with your Fluent window
 SaveManager:SetLibrary(Fluent)
