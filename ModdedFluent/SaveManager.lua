@@ -69,8 +69,8 @@ local SaveManager = {} do
    	},
    }
 
-    -- New function to set a custom name for the main settings folder.
-    function SaveManager:SetMainFolder(name)
+    -- Use this function to set a custom name for the main settings folder.
+    function SaveManager:SetFolder(name)
         assert(type(name) == "string", "Folder name must be a string.")
         self.MainFolder = name
         self:BuildFolderTree() -- Re-check and create the folder if it doesn't exist.
