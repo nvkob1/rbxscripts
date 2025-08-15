@@ -132,35 +132,39 @@ local SaveManager = {} do
    	return true
    end
 
-   function SaveManager:StartAutoSave()
-   	task.spawn(function()
-   		while self.AutoSaveEnabled do
-   			task.wait(5)
-   			self:AutoSave()
-   		end
-   	end)
-   end
-
    function SaveManager:BuildFolderTree()
    	if not isfolder(self.Folder) then
    		makefolder(self.Folder)
    	end
    end
 
-   function SaveManager:SetLibrary(library)
-   	self.Library = library
-   	self.Options = library.Options
-   	
-   	for _, option in pairs(library.Options) do
-   		if option.OnChanged then
-   			local originalCallback = option.OnChanged
-   			option.OnChanged = function(...)
-   				if originalCallback then originalCallback(...) end
-   				self:AutoSave()
-   			end
-   		end
-   	end
-   end
+    -- This function now wraps the OnChanged method for each UI element.
+    -- When a value changes, it calls the original function and then triggers an auto-save.
+    function SaveManager:SetLibrary(library)
+        self.Library = library
+        self.Options = library.Options
+        
+        for idx, option in pairs(self.Options) do
+            if option.OnChanged and not self.Ignore[idx] then
+                -- Store the original OnChanged method from the element
+                local originalOnChanged = option.OnChanged
+                
+                -- Replace the OnChanged method on the element's object
+                option.OnChanged = function(self, userCallback) -- `self` is the option object
+                    -- Create a new callback that calls the user's function and then saves.
+                    local wrappedCallback = function(...)
+                        if userCallback then
+                            pcall(userCallback, ...)
+                        end
+                        SaveManager:AutoSave() -- Save right after the value changes
+                    end
+                    
+                    -- Call the original OnChanged method, but pass our wrapped callback instead of the user's.
+                    originalOnChanged(self, wrappedCallback)
+                end
+            end
+        end
+    end
 
    function SaveManager:BuildConfigSection(tab)
    	assert(self.Library, "Must set SaveManager.Library")
@@ -171,10 +175,8 @@ local SaveManager = {} do
    		Title = "Auto Save", 
    		Default = true,
    		Callback = function(value)
+            -- This toggle now simply enables or disables the event-based saving.
    			self.AutoSaveEnabled = value
-   			if value then
-   				self:StartAutoSave()
-   			end
    		end
    	})
 
@@ -224,7 +226,7 @@ local SaveManager = {} do
    end
 
    SaveManager:BuildFolderTree()
-   SaveManager:StartAutoSave()
+   -- The timed auto-save loop is no longer needed and has been removed.
 end
 
 return SaveManager
