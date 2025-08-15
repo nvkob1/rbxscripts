@@ -3,8 +3,6 @@ local httpService = game:GetService("HttpService")
 local SaveManager = {} do
 	SaveManager.Folder = "FluentSettings"
 	SaveManager.Ignore = {}
-    SaveManager.SaveDebounce = nil
-
 	SaveManager.Parser = {
 		Toggle = {
 			Save = function(idx, object) 
@@ -96,19 +94,8 @@ local SaveManager = {} do
 		end	
 
 		pcall(writefile, fullPath, httpService:JSONEncode(data))
+        return true
 	end
-
-    -- Debounce the save function to prevent it from firing too rapidly (e.g., while dragging a slider)
-    function SaveManager:DebouncedSave()
-        if self.SaveDebounce then
-            task.cancel(self.SaveDebounce)
-        end
-        -- Wait 0.5 seconds after the last change before saving.
-        self.SaveDebounce = task.delay(0.5, function()
-            self:SaveSettings()
-            self.SaveDebounce = nil
-        end)
-    end
 
 	function SaveManager:LoadSettings()
 		local file = self.Folder .. "/settings.json"
@@ -151,15 +138,6 @@ local SaveManager = {} do
                     Duration = 5
                 })
             end
-            
-            -- After loading, attach the auto-save function to all elements
-            for index, option in pairs(self.Options) do
-                if not self.Ignore[index] and type(option.OnChanged) == "function" then
-                    option:OnChanged(function()
-                        self:DebouncedSave()
-                    end)
-                end
-            end
         end)
 	end
 
@@ -170,7 +148,7 @@ local SaveManager = {} do
         
         section:AddParagraph({
             Title = "Auto Save",
-            Content = "Your settings are saved automatically whenever you make a change."
+            Content = "Your settings are saved automatically every second."
         })
 
         section:AddButton({
@@ -193,6 +171,15 @@ local SaveManager = {} do
                 end
             end
         })
+
+        -- Start the auto-save loop
+        task.spawn(function()
+            while true do
+                task.wait(1) -- Save every 1 second
+                if self.Library.Unloaded then break end
+                self:SaveSettings()
+            end
+        end)
 	end
 
 	SaveManager:BuildFolderTree()
