@@ -2,7 +2,8 @@ local httpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
 
 local SaveManager = {} do
-   SaveManager.Folder = "FluentSettings_" .. Players.LocalPlayer.UserId
+   SaveManager.MainFolder = "FluentSettings"
+   SaveManager.UserFile = Players.LocalPlayer.Name .. ".json"
    SaveManager.Ignore = {}
    SaveManager.AutoSaveEnabled = true
    SaveManager.Parser = {
@@ -68,6 +69,13 @@ local SaveManager = {} do
    	},
    }
 
+    -- New function to set a custom name for the main settings folder.
+    function SaveManager:SetMainFolder(name)
+        assert(type(name) == "string", "Folder name must be a string.")
+        self.MainFolder = name
+        self:BuildFolderTree() -- Re-check and create the folder if it doesn't exist.
+    end
+
    function SaveManager:SetIgnoreIndexes(list)
    	for _, key in next, list do
    		self.Ignore[key] = true
@@ -89,7 +97,8 @@ local SaveManager = {} do
 
    	local success, encoded = pcall(httpService.JSONEncode, httpService, data)
    	if success then
-   		writefile(self.Folder .. "/autosave.json", encoded)
+        -- Save to the user-specific file inside the main folder.
+   		writefile(self.MainFolder .. "/" .. self.UserFile, encoded)
    	end
    end
 
@@ -109,18 +118,17 @@ local SaveManager = {} do
    		return false, "failed to encode data"
    	end
 
-   	writefile(self.Folder .. "/settings.json", encoded)
+    -- Save to the user-specific file inside the main folder.
+   	writefile(self.MainFolder .. "/" .. self.UserFile, encoded)
    	return true
    end
 
    function SaveManager:LoadSettings()
-   	local autoFile = self.Folder .. "/autosave.json"
-   	local manualFile = self.Folder .. "/settings.json"
+   	local userFile = self.MainFolder .. "/" .. self.UserFile
    	
-   	local file = isfile(manualFile) and manualFile or (isfile(autoFile) and autoFile or nil)
-   	if not file then return false, "no save file found" end
+   	if not isfile(userFile) then return false, "no save file found" end
 
-   	local success, decoded = pcall(httpService.JSONDecode, httpService, readfile(file))
+   	local success, decoded = pcall(httpService.JSONDecode, httpService, readfile(userFile))
    	if not success then return false, "decode error" end
 
    	for _, option in next, decoded.objects do
@@ -132,34 +140,29 @@ local SaveManager = {} do
    	return true
    end
 
+   -- This function now only ensures the main settings folder exists.
    function SaveManager:BuildFolderTree()
-   	if not isfolder(self.Folder) then
-   		makefolder(self.Folder)
+   	if not isfolder(self.MainFolder) then
+   		makefolder(self.MainFolder)
    	end
    end
 
-    -- This function now wraps the OnChanged method for each UI element.
-    -- When a value changes, it calls the original function and then triggers an auto-save.
     function SaveManager:SetLibrary(library)
         self.Library = library
         self.Options = library.Options
         
         for idx, option in pairs(self.Options) do
             if option.OnChanged and not self.Ignore[idx] then
-                -- Store the original OnChanged method from the element
                 local originalOnChanged = option.OnChanged
                 
-                -- Replace the OnChanged method on the element's object
-                option.OnChanged = function(self, userCallback) -- `self` is the option object
-                    -- Create a new callback that calls the user's function and then saves.
+                option.OnChanged = function(self, userCallback)
                     local wrappedCallback = function(...)
                         if userCallback then
                             pcall(userCallback, ...)
                         end
-                        SaveManager:AutoSave() -- Save right after the value changes
+                        SaveManager:AutoSave()
                     end
                     
-                    -- Call the original OnChanged method, but pass our wrapped callback instead of the user's.
                     originalOnChanged(self, wrappedCallback)
                 end
             end
@@ -175,7 +178,6 @@ local SaveManager = {} do
    		Title = "Auto Save", 
    		Default = true,
    		Callback = function(value)
-            -- This toggle now simply enables or disables the event-based saving.
    			self.AutoSaveEnabled = value
    		end
    	})
@@ -226,7 +228,6 @@ local SaveManager = {} do
    end
 
    SaveManager:BuildFolderTree()
-   -- The timed auto-save loop is no longer needed and has been removed.
 end
 
 return SaveManager
