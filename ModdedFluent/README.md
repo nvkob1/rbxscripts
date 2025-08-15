@@ -15,7 +15,7 @@ local SaveManager = loadstring(game:HttpGet("[https://raw.githubusercontent.com/
 
 -- Optional: Set a custom name for the main settings folder.
 -- If you don't set this, it will default to "FluentSettings".
-SaveManager:SetMainFolder("MyCustomConfigFolder")
+SaveManager:SetFolder("MyCustomConfigFolder")
 
 -- Set up with your Fluent window
 SaveManager:SetLibrary(Fluent)
