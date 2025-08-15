@@ -69,11 +69,23 @@ local SaveManager = {} do
    	},
    }
 
-    -- Use this function to set a custom name for the main settings folder.
+    -- Renamed back to SetFolder for consistency
     function SaveManager:SetFolder(name)
         assert(type(name) == "string", "Folder name must be a string.")
         self.MainFolder = name
         self:BuildFolderTree() -- Re-check and create the folder if it doesn't exist.
+    end
+
+    -- Added back for backward compatibility
+    function SaveManager:IgnoreThemeSettings()
+		self:SetIgnoreIndexes({ 
+			"InterfaceTheme", "AcrylicToggle", "TransparentToggle", "MenuKeybind"
+		})
+	end
+
+    -- Added back for backward compatibility, now calls LoadSettings
+    function SaveManager:LoadAutoloadConfig()
+        self:LoadSettings()
     end
 
    function SaveManager:SetIgnoreIndexes(list)
@@ -97,7 +109,6 @@ local SaveManager = {} do
 
    	local success, encoded = pcall(httpService.JSONEncode, httpService, data)
    	if success then
-        -- Save to the user-specific file inside the main folder.
    		writefile(self.MainFolder .. "/" .. self.UserFile, encoded)
    	end
    end
@@ -118,7 +129,6 @@ local SaveManager = {} do
    		return false, "failed to encode data"
    	end
 
-    -- Save to the user-specific file inside the main folder.
    	writefile(self.MainFolder .. "/" .. self.UserFile, encoded)
    	return true
    end
@@ -140,7 +150,6 @@ local SaveManager = {} do
    	return true
    end
 
-   -- This function now only ensures the main settings folder exists.
    function SaveManager:BuildFolderTree()
    	if not isfolder(self.MainFolder) then
    		makefolder(self.MainFolder)
