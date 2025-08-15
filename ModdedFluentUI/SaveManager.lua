@@ -84,17 +84,19 @@ local SaveManager = {} do
 	end
 
 	function SaveManager:SaveSettings()
-		local fullPath = self.Folder .. "/settings.json"
-		local data = { objects = {} }
+        -- Use a protected call to prevent any error from breaking the main script
+        pcall(function()
+            local fullPath = self.Folder .. "/settings.json"
+            local data = { objects = {} }
 
-		for idx, option in next, SaveManager.Options do
-			if not self.Parser[option.Type] then continue end
-			if self.Ignore[idx] then continue end
-			table.insert(data.objects, self.Parser[option.Type].Save(idx, option))
-		end	
+            for idx, option in next, SaveManager.Options do
+                if not self.Parser[option.Type] then continue end
+                if self.Ignore[idx] then continue end
+                table.insert(data.objects, self.Parser[option.Type].Save(idx, option))
+            end	
 
-		pcall(writefile, fullPath, httpService:JSONEncode(data))
-        return true
+            writefile(fullPath, httpService:JSONEncode(data))
+        end)
 	end
 
 	function SaveManager:LoadSettings()
@@ -110,9 +112,12 @@ local SaveManager = {} do
         if type(decoded) ~= "table" or not decoded.objects then return false, "invalid format" end
 
 		for _, option in next, decoded.objects do
-			if option and option.type and option.idx and self.Parser[option.type] and SaveManager.Options[option.idx] then
-                pcall(self.Parser[option.type].Load, self, option.idx, option)
-			end
+            -- Use a protected call for each object to ensure one bad setting doesn't stop others from loading
+			pcall(function()
+                if option and option.type and option.idx and self.Parser[option.type] and SaveManager.Options[option.idx] then
+                    self.Parser[option.type].Load(self, option.idx, option)
+                end
+            end)
 		end
 
 		return true
@@ -148,7 +153,7 @@ local SaveManager = {} do
         
         section:AddParagraph({
             Title = "Auto Save",
-            Content = "Your settings are saved automatically every second."
+            Content = "Your settings are saved automatically every 2 seconds."
         })
 
         section:AddButton({
@@ -172,11 +177,11 @@ local SaveManager = {} do
             end
         })
 
-        -- Start the auto-save loop
+        -- Start the safe, timed auto-save loop
         task.spawn(function()
             while true do
-                task.wait(1) -- Save every 1 second
-                if self.Library.Unloaded then break end
+                task.wait(2) -- Save every 2 seconds
+                if self.Library and self.Library.Unloaded then break end
                 self:SaveSettings()
             end
         end)
