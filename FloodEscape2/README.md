@@ -1,4 +1,4 @@
-# Improved Tomato Auto Farm (Beta)
+# Improved Tomato Auto Farm (In Dev)
 ```lua
 --if you want it to be on when executed do:
 --getgenv().TomatoAutoFarm = true
