@@ -1,4 +1,4 @@
-# Remade Tomato Auto Farm (In Dev)
+# Fixed Tomato Auto Farm
 ```lua
 --if you want it to be on when executed do:
 --getgenv().TomatoAutoFarm = tru
