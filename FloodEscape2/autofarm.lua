@@ -44,33 +44,18 @@ end
 
 local function Check(Flag)
     local character = GetChar()
-    if not character then 
-        Alert("DEBUG: No character found in Check()")
-        return false 
-    end
+    if not character then return false end
     
     local HumanoidRootPart = character:FindFirstChild("HumanoidRootPart")
-    if not HumanoidRootPart then 
-        Alert("DEBUG: No HumanoidRootPart found in Check()")
-        return false 
-    end
-    
-    local pos = HumanoidRootPart.Position
-    Alert("DEBUG: Character position - X: " .. pos.X .. ", Y: " .. pos.Y .. ", Z: " .. pos.Z)
+    if not HumanoidRootPart then return false end
     
     if Flag == "InLift" then
-        if pos.X < 50 and pos.Z > 70 then
-            Alert("DEBUG: InLift = true")
+        if HumanoidRootPart.Position.X < 50 and HumanoidRootPart.Position.Z > 70 then
             return true
-        else
-            Alert("DEBUG: InLift = false (X: " .. pos.X .. ", Z: " .. pos.Z .. ")")
         end
     elseif Flag == "InGame" then
-        if pos.X > 50 then
-            Alert("DEBUG: InGame = true")
+        if HumanoidRootPart.Position.X > 50 then
             return true
-        else
-            Alert("DEBUG: InGame = false (X: " .. pos.X .. ")")
         end
     end
     return false
@@ -98,15 +83,12 @@ local function OnMapLoad(Map)
     end
     
     -- Check if we're in game
-    local inGameStatus = Check("InGame")
-    Alert("InGame check result: " .. tostring(inGameStatus))
-    
-    if not inGameStatus then
-        Alert("Skipping auto-farm due to InGame == false. Waiting to return to lift...")
+    if not Check("InGame") then
+        Alert("Not in game area - skipping auto-farm. Character X position must be > 50.")
         return -- Exit early if not in game
     end
     
-    Alert("=== Starting Auto-Farm Setup ===")
+    Alert("Starting auto-farm setup...")
     
     -- Verify character exists
     local character = GetChar()
@@ -121,7 +103,7 @@ local function OnMapLoad(Map)
         return
     end
     
-    Alert("Character ready. Position: " .. tostring(HumanoidRootPart.Position))
+    Alert("Character ready at position: " .. tostring(HumanoidRootPart.Position))
     
     -- Scan for buttons
     local Buttons = {}
@@ -201,12 +183,16 @@ local function OnMapLoad(Map)
     end
     
     local Attempts = 0
-    local loopCount = 0
+    local debugCounter = 0
     
     while task.wait(CHECK_DELAY) and Check("InGame") do
-        loopCount = loopCount + 1
-        if loopCount % 50 == 0 then -- Log every 50 loops to avoid spam
-            Alert("Auto-farm loop iteration: " .. loopCount)
+        debugCounter = debugCounter + 1
+        
+        -- Only show debug info every 100 iterations to reduce spam
+        local showDebug = (debugCounter % 100 == 0)
+        
+        if showDebug then
+            Alert("Auto-farm running... iteration: " .. debugCounter)
         end
         
         local ExitRegion = Map:FindFirstChild("ExitRegion", true)
@@ -255,9 +241,8 @@ local function OnMapLoad(Map)
                 end
             end
             
-            if FailedScan then
-                if loopCount % 100 == 0 then -- Only alert every 100 failed scans
-                    Alert("No valid buttons found (scan " .. loopCount .. ")")
+            if FailedScan and showDebug then
+                Alert("No valid buttons found (scan " .. debugCounter .. ")")
                 end
             end
         else
@@ -395,7 +380,7 @@ _G.LoopCancel = false
 Alert("=== TOMATO AUTO FARM STARTING ===")
 Alert("Ready! Starting main update loop...")
 
-while wait(1) do -- Changed to 1 second intervals
+while wait(2) do -- Check every 2 seconds to reduce spam
     local function Cancel()
         Alert("=== UPDATE LOOP CANCELLED ===")
         if MapDetect then
@@ -406,10 +391,8 @@ while wait(1) do -- Changed to 1 second intervals
     
     -- Check if we should connect map detector
     if Check("InLift") and not MapDetect then
-        Alert("In lift - connecting map detector")
         ConnectMap()
     elseif not Check("InLift") and MapDetect then
-        Alert("Left lift - disconnecting map detector")
         MapDetect:Disconnect()
         MapDetect = nil
     end
