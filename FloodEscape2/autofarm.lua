@@ -5,16 +5,15 @@ local EXITREGION_MAX_ATTEMPTS = 50
 local CHECK_DELAY = 0
 local BUTTON_DELAY = 0
 local EXITREGION_WAIT = 0
-local MAP_NAME_TIMEOUT = 10 -- Timeout for map name change
 
 local LocalPlayer = game:GetService("Players").LocalPlayer
 local Multiplayer = Workspace.Multiplayer
+
 
 local CLMAIN = LocalPlayer.PlayerScripts.CL_MAIN_GameScript
 local CLMAINenv = getsenv(CLMAIN)
 local gameAlert = CLMAINenv.newAlert
 local Alert
-
 if CLMAINenv then
     Alert = function(...)
         if ALERTS_ENABLED then
@@ -27,6 +26,7 @@ else
     Alert = print
 end
 
+
 function isRandomString(str)
     if #str == 0 then return false end
     for i = 1, #str do
@@ -37,18 +37,12 @@ function isRandomString(str)
     end
     return true
 end
-
 local function GetChar()
     return LocalPlayer.Character or (LocalPlayer.CharacterAdded:wait() and LocalPlayer.Character)
 end
-
 local function Check(Flag)
-    local character = GetChar()
-    if not character then return false end
-    
-    local HumanoidRootPart = character:FindFirstChild("HumanoidRootPart")
+    local HumanoidRootPart = GetChar():FindFirstChild("HumanoidRootPart")
     if not HumanoidRootPart then return false end
-    
     if Flag == "InLift" then
         if HumanoidRootPart.Position.X < 50 and HumanoidRootPart.Position.Z > 70 then
             return true
@@ -60,91 +54,49 @@ local function Check(Flag)
     end
     return false
 end
-
 local MapDetect
 local ConnectMap
 
 local function OnMapLoad(Map)
-    Alert("=== OnMapLoad Started ===")
-    Alert("Map object: " .. tostring(Map))
-    
-    local success, MapName = pcall(function()
-        local settings = Map:WaitForChild("Settings", 5)
-        if settings then
-            return settings:GetAttribute("MapName")
-        end
-        return nil
-    end)
-    
-    if success and MapName then
-        Alert("Map Loaded! " .. MapName)
-    else
-        Alert("Map Loaded but no MapName found or settings missing!")
+    local MapName = Map:WaitForChild("Settings"):GetAttribute("MapName")
+    if MapName then
+        Alert("Map Loaded!" .. MapName)
     end
-    
-    -- Check if we're in game
-    if not Check("InGame") then
-        Alert("Not in game area - skipping auto-farm. Character X position must be > 50.")
-        return -- Exit early if not in game
-    end
-    
-    Alert("Starting auto-farm setup...")
-    
-    -- Verify character exists
-    local character = GetChar()
-    if not character then
-        Alert("ERROR: No character found!")
+    if Check("InGame") == false then
+        Alert("Skipping due to InGame == false.")
+        -- FIXED: Reconnect map detection even when skipping
+        ConnectMap()
         return
     end
-    
-    local HumanoidRootPart = character:FindFirstChild("HumanoidRootPart")
-    if not HumanoidRootPart then
-        Alert("ERROR: No HumanoidRootPart found!")
-        return
-    end
-    
-    Alert("Character ready at position: " .. tostring(HumanoidRootPart.Position))
-    
-    -- Scan for buttons
+    -- if Map Loaded and InGame code after this will run.
     local Buttons = {}
-    Alert("Scanning map for buttons...")
-    
-    local buttonCount = 0
+    -- Single Scan of Map to reduce lag.
     for i, MapObject in pairs(Map:GetDescendants()) do
         if isRandomString(MapObject.Name) and MapObject.ClassName == "Model" then
             local Hitbox
-            for _, Candidate in pairs(MapObject:GetChildren()) do
+            for i, Candidate in pairs(MapObject:GetChildren()) do
                 if Candidate:IsA("BasePart") and tostring(Candidate.BrickColor) ~= "Medium stone grey" then
                     Hitbox = Candidate
                     break
                 end
             end
             if Hitbox and isRandomString(Hitbox.Name) then
-                -- Confirmed button
+                -- Confirmed Buttonness
                 Hitbox.Name = "Hitbox"
                 table.insert(Buttons, MapObject)
-                buttonCount = buttonCount + 1
             end
         end
     end
-    
-    Alert("Found " .. buttonCount .. " buttons")
-    
-    -- Grab Lost Page
-    Alert("Searching for Lost Page...")
+    local HumanoidRootPart = GetChar().HumanoidRootPart
+    -- Grab Lost Page and Escapee
+    local OriginalCFrame = HumanoidRootPart.CFrame
     local LostPage = Map:FindFirstChild("_LostPage", true)
     if LostPage then
-        local OriginalCFrame = HumanoidRootPart.CFrame
         HumanoidRootPart.CFrame = LostPage.CFrame
-        task.wait(0.1)
+        task.wait()
         HumanoidRootPart.CFrame = OriginalCFrame
-        Alert("Got Lost Page!")
-    else
-        Alert("No Lost Page found")
+        Alert("Got Lost Page.")
     end
-    
-    -- Grab Escapee
-    Alert("Searching for Escapee...")
     local Escapee = Map:FindFirstChild("NPC", true)
     if Escapee then
         Escapee = Escapee.Parent
@@ -156,265 +108,141 @@ local function OnMapLoad(Map)
         if Escapee then
             local OriginalCFrame = HumanoidRootPart.CFrame
             HumanoidRootPart.CFrame = Escapee.CFrame
-            task.wait(0.1)
+            task.wait()
             HumanoidRootPart.CFrame = OriginalCFrame
-            Alert("Got Escapee!")
-        else
-            Alert("Contact not found")
+            Alert("Got Escapee.")
         end
-    else
-        Alert("No Escapee found")
     end
-    
     -- Auto Farm Loop
-    Alert("=== Commencing Auto Farm ===")
+    Alert("Commencing Auto Farm")
     local CurrentButton = nil
-    local Humanoid = character.Humanoid
+    local Humanoid = GetChar().Humanoid
     local GodMode
-    
-    -- God mode setup
-    if Humanoid then
-        GodMode = Humanoid:GetPropertyChangedSignal("Health"):Connect(function()
-            Humanoid.Health = 1000
-        end)
-        Alert("God mode activated")
-    else
-        Alert("WARNING: No Humanoid found!")
-    end
-    
+    GodMode = Humanoid:GetPropertyChangedSignal("Health"):Connect(function()
+        Humanoid.Health = 1000
+    end)
     local Attempts = 0
-    local debugCounter = 0
-    
+    local DifferentScan = false
     while task.wait(CHECK_DELAY) and Check("InGame") do
-        debugCounter = debugCounter + 1
-        
-        -- Only show debug info every 100 iterations to reduce spam
-        local showDebug = (debugCounter % 100 == 0)
-        
-        if showDebug then
-            Alert("Auto-farm running... iteration: " .. debugCounter)
-        end
-        
         local ExitRegion = Map:FindFirstChild("ExitRegion", true)
-        local currentChar = GetChar()
-        if not currentChar then
-            Alert("Character lost during auto-farm!")
-            break
-        end
-        
-        local currentHRP = currentChar:FindFirstChild("HumanoidRootPart")
-        if not currentHRP then
-            Alert("HumanoidRootPart lost during auto-farm!")
-            break
-        end
-        
-        local currentHumanoid = currentChar:FindFirstChild("Humanoid")
-        if currentHumanoid then
-            currentHumanoid.Jump = true
-        end
-        
+        local HumanoidRootPart = GetChar().HumanoidRootPart
+        Humanoid.Jump = true
         local FailedScan = true
-        
         if not ExitRegion then
-            -- Look for buttons to press
             for i, Button in pairs(Buttons) do
                 local ButtonHitbox = Button:FindFirstChild("Hitbox")
                 if ButtonHitbox then
                     CurrentButton = Button
+                    local ButtonID = tostring(i)
+                    local ButtonColor = tostring(Button.Hitbox.BrickColor)
                     local TouchFound = Button:FindFirstChild("TouchInterest", true)
                     local GuiFound = Button:FindFirstChildWhichIsA("BillboardGui", true)
-                    
-                    if TouchFound and GuiFound then
+                    --if ButtonColor ~= "Black" and ButtonColor ~= "Bright yellow" then
+                    if (TouchFound and GuiFound) then
                         FailedScan = false
-                        -- Teleport to button
-                        currentHRP.Anchored = false
-                        currentHRP.CFrame = CFrame.new(ButtonHitbox.Position + Vector3.new(0, 2, 0))
-                        if currentHumanoid then
-                            currentHumanoid:ChangeState(Enum.HumanoidStateType.Jumping)
-                        end
-                        currentHRP.Velocity = Vector3.new(0, 100, 0)
-                        task.wait(0.1)
-                        currentHRP.Anchored = true
+                        -- Teleport to button + bypass button anti-cheat.
+                        HumanoidRootPart.Anchored = false
+                        local OriginalCFrame = HumanoidRootPart.CFrame
+                        HumanoidRootPart.CFrame = CFrame.new(ButtonHitbox.Position)
+                        Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+                        HumanoidRootPart.Velocity = Vector3.new(0, 100, 0)
+                        task.wait(.1)
+                        HumanoidRootPart.Anchored = true
                         task.wait(BUTTON_DELAY)
-                        break
+                        --task.wait(BUTTON_DELAY)
+                        --break
                     end
                 end
             end
-            
-            if FailedScan and showDebug then
-                Alert("No valid buttons found (scan " .. debugCounter .. ")")
-                end
+            if FailedScan == true then
+                DifferentScan = true
             end
-        else
-            -- Exit region found
-            Alert("Exit region detected! Attempting to exit...")
-            currentHRP.Anchored = false
-            
+            --HumanoidRootPart.Velocity = Vector3.new(0,)
+        elseif ExitRegion then
+            HumanoidRootPart.Anchored = false
             if Attempts < EXITREGION_MAX_ATTEMPTS then
-                Attempts = Attempts + 1
-                currentHRP.CFrame = ExitRegion.CFrame
-                if currentHumanoid then
-                    currentHumanoid:ChangeState(Enum.HumanoidStateType.Landed)
-                end
-                currentHRP.Velocity = Vector3.new(50, -1, 50)
-                task.wait(0.1)
-                
-                if (currentHRP.Position - ExitRegion.Position).Magnitude <= 5 then
-                    Attempts = Attempts + 5 -- Speed up if close
+                Attempts += 1
+                -- Teleport to ExitRegion
+                HumanoidRootPart.CFrame = ExitRegion.CFrame -- Vector3.new(0, 10, 0)
+                Humanoid:ChangeState(Enum.HumanoidStateType.Landed)
+                HumanoidRootPart.Velocity = Vector3.new(50, -1, 50)
+                task.wait()
+                if (HumanoidRootPart.Position - ExitRegion.Position).Magnitude <= 5 then
+                    -- Speed it up.
+                    Attempts += 1
                 end
             else
-                Alert("Successfully reached ExitRegion after " .. Attempts .. " attempts!")
+                Alert("Teleported to ExitRegion.")
                 break
             end
         end
     end
-    
-    Alert("Auto-farm loop ended")
-    
-    -- Cleanup
-    local finalChar = GetChar()
-    if finalChar and finalChar:FindFirstChild("Humanoid") then
-        finalChar.Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
-    end
-    
+    Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
     task.wait(EXITREGION_WAIT)
-    
-    if GodMode then
-        GodMode:Disconnect()
-        GodMode = nil
-        Alert("God mode disabled")
-    end
-    
-    Alert("=== Map Complete ===")
-    Alert("Preparing for next map - resetting character...")
-    
-    -- Reset character
-    local charToReset = GetChar()
-    if charToReset and charToReset:FindFirstChild("Head") then
-        charToReset.Head:Destroy()
-    end
-    
-    Alert("Waiting for respawn...")
+    Alert("Complete.")
+    GodMode:Disconnect()
+    GodMode = nil
+    Alert("Preparing for next Map! Resetting..")
+    GetChar().Head:Destroy()
+    Alert("Waiting for Player..")
     task.wait(2)
+    local HumanoidRootPart = GetChar():WaitForChild("HumanoidRootPart")
+    HumanoidRootPart.CFrame = HumanoidRootPart.CFrame + Vector3.new(0, 5, 0)
+    repeat
+        task.wait()
+        HumanoidRootPart.Velocity = Vector3.new(0, 0, 100)
+    until Check("InLift")
     
-    -- Move back to lift
-    local respawnedChar = GetChar()
-    if respawnedChar then
-        local respawnedHRP = respawnedChar:WaitForChild("HumanoidRootPart", 10)
-        if respawnedHRP then
-            respawnedHRP.CFrame = respawnedHRP.CFrame + Vector3.new(0, 5, 0)
-            Alert("Moving back to lift...")
-            
-            local moveAttempts = 0
-            repeat
-                task.wait(0.1)
-                if respawnedHRP.Parent then
-                    respawnedHRP.Velocity = Vector3.new(0, 0, 100)
-                end
-                moveAttempts = moveAttempts + 1
-                if moveAttempts > 100 then
-                    Alert("WARNING: Taking too long to reach lift!")
-                    break
-                end
-            until Check("InLift") or moveAttempts > 100
-            
-            if Check("InLift") then
-                Alert("Successfully returned to lift!")
-            end
-        end
-    end
+    -- FIXED: Reconnect map detection after completing a map
+    Alert("Reconnecting map detection...")
+    ConnectMap()
 end
 
 ConnectMap = function()
-    Alert("=== Setting up map detection ===")
-    MapDetect = Multiplayer.ChildAdded:Connect(function(NewMap)
-        Alert("New map detected: " .. tostring(NewMap))
+    -- FIXED: Clean up existing connection before creating new one
+    if MapDetect then
         MapDetect:Disconnect()
         MapDetect = nil
-        
-        -- Wait for map name change with timeout
-        Alert("Waiting for map name to update...")
-        local nameChanged = false
-        local nameConnection
-        local timeoutConnection
-        
-        nameConnection = NewMap:GetPropertyChangedSignal("Name"):Connect(function()
-            Alert("Map name changed to: " .. NewMap.Name)
-            nameChanged = true
-            nameConnection:Disconnect()
-            if timeoutConnection then 
-                timeoutConnection:Disconnect() 
-            end
-        end)
-        
-        timeoutConnection = task.delay(MAP_NAME_TIMEOUT, function()
-            if not nameChanged then
-                Alert("WARNING: Map name didn't change within " .. MAP_NAME_TIMEOUT .. " seconds!")
-                if nameConnection then
-                    nameConnection:Disconnect()
-                end
-                nameChanged = true
-            end
-        end)
-        
-        -- Wait for name change or timeout
-        repeat 
-            task.wait(0.1) 
-        until nameChanged
-        
-        Alert("Proceeding to map processing...")
+    end
+    
+    MapDetect = Multiplayer.ChildAdded:Connect(function(NewMap)
+        MapDetect:Disconnect()
+        MapDetect = nil
+        NewMap:GetPropertyChangedSignal("Name"):Wait()
         OnMapLoad(NewMap)
-        Alert("Reconnecting map detector...")
-        ConnectMap() -- Reconnect for next map
     end)
-    Alert("Map detection is now active!")
+    Alert("Map detection connected.")
 end
 
 -- Setup Main Update Loop
 if _G.LoopCancel ~= nil then
     _G.LoopCancel = true
-    task.wait(0.1)
+    task.wait(.1)
 end
 _G.LoopCancel = false
-
-Alert("=== TOMATO AUTO FARM STARTING ===")
-Alert("Ready! Starting main update loop...")
-
-while wait(2) do -- Check every 2 seconds to reduce spam
+Alert("Ready! Starting Update Loop.")
+while wait() do
     local function Cancel()
-        Alert("=== UPDATE LOOP CANCELLED ===")
+        Alert("Update Loop cancelled.")
         if MapDetect then
             MapDetect:Disconnect()
             MapDetect = nil
         end
     end
-    
-    -- Check if we should connect map detector
-    if Check("InLift") and not MapDetect then
+    if Check("InLift") == true and not MapDetect then
         ConnectMap()
-    elseif not Check("InLift") and MapDetect then
+    elseif Check("InLift") == false and MapDetect then
         MapDetect:Disconnect()
         MapDetect = nil
     end
-    
-    -- Check for manual cancellation
     if _G.LoopCancel == true then
         _G.LoopCancel = false
         Cancel()
         break
     end
-    
-    -- Check for pause/resume
     if getgenv().TomatoAutoFarm == false then
-        Alert("=== AUTO FARM PAUSED ===")
-        repeat 
-            wait(1) 
-        until getgenv().TomatoAutoFarm == true or _G.LoopCancel == true
-        
-        if not _G.LoopCancel then
-            Alert("=== AUTO FARM RESUMED ===")
-        end
+        Alert("Auto Farm Paused!")
+        repeat wait() until getgenv().TomatoAutoFarm == true or _G.LoopCancel == true
+        Alert("Auto Farm Resumed!")
     end
 end
-
-Alert("=== SCRIPT ENDED ===")
