@@ -288,19 +288,40 @@ ConnectMap = function()
             return
         end
         
-        NewMap:GetPropertyChangedSignal("Name"):Wait()
+        Alert("Connecting..")
         
-        -- Additional safety check after name change
-        if NewMap and NewMap.Parent then
-            OnMapLoad(NewMap)
-        else
-            Alert("Map became invalid, reconnecting...")
-            task.wait(1)
-            ConnectMap()
-            return
+        -- Handle both fast and slow map loading
+        local function ProcessMap()
+            if NewMap and NewMap.Parent then
+                OnMapLoad(NewMap)
+            else
+                Alert("Map became invalid, reconnecting...")
+                task.wait(1)
+                ConnectMap()
+                return
+            end
         end
         
-        Alert("Connecting..")
+        -- Check if map name already changed (fast loading)
+        if NewMap.Name ~= "Map" and NewMap.Name ~= "" then
+            -- Map already loaded, process immediately
+            Alert("Map loaded quickly, processing immediately")
+            ProcessMap()
+        else
+            -- Map still loading, wait for name change
+            Alert("Waiting for map name to change...")
+            local success, err = pcall(function()
+                NewMap:GetPropertyChangedSignal("Name"):Wait()
+            end)
+            
+            if success then
+                ProcessMap()
+            else
+                Alert("Name change wait failed, trying direct processing...")
+                task.wait(0.5) -- Give it a moment
+                ProcessMap()
+            end
+        end
     end)
 end
 
