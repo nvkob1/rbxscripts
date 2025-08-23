@@ -87,8 +87,6 @@ local function OnMapLoad(Map)
         return -- Exit the function instead of continuing
     end
     
-    Alert("InGame check passed, starting scan...")
-    
     -- if Map Loaded and InGame code after this will run.
     local Buttons = {}
     -- Single Scan of Map to reduce lag.
@@ -109,18 +107,14 @@ local function OnMapLoad(Map)
         end
     end
     
-    Alert("Found " .. #Buttons .. " buttons")
-    
     -- Ensure character and components exist
     local Character = GetChar()
     if not Character then
-        Alert("Character not found, aborting map")
         return
     end
     
     local HumanoidRootPart = Character:WaitForChild("HumanoidRootPart", 5)
     if not HumanoidRootPart then
-        Alert("HumanoidRootPart not found, aborting map")
         return
     end
     
@@ -155,7 +149,6 @@ local function OnMapLoad(Map)
     local CurrentButton = nil
     local Humanoid = Character:WaitForChild("Humanoid", 5)
     if not Humanoid then
-        Alert("Humanoid not found, aborting map")
         return
     end
     
@@ -206,8 +199,6 @@ local function OnMapLoad(Map)
             end
             if FailedScan == true then
                 DifferentScan = true
-                -- Add debug info when no buttons found
-                Alert("No valid buttons found in this scan - buttons may be pressed already")
             end
             --HumanoidRootPart.Velocity = Vector3.new(0,)
         elseif ExitRegion then
@@ -282,20 +273,17 @@ ConnectMap = function()
         
         -- Add safety check for map object
         if not NewMap or not NewMap.Parent then
-            Alert("Invalid map detected, reconnecting...")
             task.wait(1)
             ConnectMap()
             return
         end
         
-        Alert("Connecting..")
-        
         -- Handle both fast and slow map loading
         local function ProcessMap()
             if NewMap and NewMap.Parent then
                 OnMapLoad(NewMap)
+                Alert("Connecting..")
             else
-                Alert("Map became invalid, reconnecting...")
                 task.wait(1)
                 ConnectMap()
                 return
@@ -305,11 +293,9 @@ ConnectMap = function()
         -- Check if map name already changed (fast loading)
         if NewMap.Name ~= "Map" and NewMap.Name ~= "" then
             -- Map already loaded, process immediately
-            Alert("Map loaded quickly, processing immediately")
             ProcessMap()
         else
             -- Map still loading, wait for name change
-            Alert("Waiting for map name to change...")
             local success, err = pcall(function()
                 NewMap:GetPropertyChangedSignal("Name"):Wait()
             end)
@@ -317,7 +303,6 @@ ConnectMap = function()
             if success then
                 ProcessMap()
             else
-                Alert("Name change wait failed, trying direct processing...")
                 task.wait(0.5) -- Give it a moment
                 ProcessMap()
             end
