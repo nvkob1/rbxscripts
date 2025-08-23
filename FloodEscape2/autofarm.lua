@@ -144,8 +144,10 @@ local function OnMapLoad(Map)
                         Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
                         HumanoidRootPart.Velocity = Vector3.new(0, 100, 0)
                         task.wait(.1)
+                        -- Only anchor briefly for button interaction
                         HumanoidRootPart.Anchored = true
                         task.wait(BUTTON_DELAY)
+                        HumanoidRootPart.Anchored = false  -- Unanchor after button delay
                         --task.wait(BUTTON_DELAY)
                         --break
                     end
@@ -153,9 +155,12 @@ local function OnMapLoad(Map)
             end
             if FailedScan == true then
                 DifferentScan = true
+                -- Ensure character isn't anchored during failed scans
+                HumanoidRootPart.Anchored = false
             end
             --HumanoidRootPart.Velocity = Vector3.new(0,)
         elseif ExitRegion then
+            -- Always unanchor when dealing with ExitRegion
             HumanoidRootPart.Anchored = false
             if Attempts < EXITREGION_MAX_ATTEMPTS then
                 Attempts += 1
@@ -173,7 +178,14 @@ local function OnMapLoad(Map)
                 break
             end
         end
+        -- Ensure character is unanchored at end of each loop iteration
+        if HumanoidRootPart.Anchored then
+            HumanoidRootPart.Anchored = false
+        end
     end
+    -- Ensure character is unanchored when exiting the main loop
+    local HumanoidRootPart = GetChar().HumanoidRootPart
+    HumanoidRootPart.Anchored = false
     Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
     task.wait(EXITREGION_WAIT)
     Alert("Complete.")
