@@ -37,15 +37,11 @@ function isRandomString(str)
     end
     return true
 end
-
 local function GetChar()
     return LocalPlayer.Character or (LocalPlayer.CharacterAdded:wait() and LocalPlayer.Character)
 end
-
 local function Check(Flag)
-    local Character = GetChar()
-    if not Character then return false end
-    local HumanoidRootPart = Character:FindFirstChild("HumanoidRootPart")
+    local HumanoidRootPart = GetChar():FindFirstChild("HumanoidRootPart")
     if not HumanoidRootPart then return false end
     if Flag == "InLift" then
         if HumanoidRootPart.Position.X < 50 and HumanoidRootPart.Position.Z > 70 then
@@ -58,35 +54,17 @@ local function Check(Flag)
     end
     return false
 end
-
 local MapDetect
 local ConnectMap
 
 local function OnMapLoad(Map)
-    -- Add safety wait for map to fully load
-    task.wait(0.5)
-    
     local MapName = Map:WaitForChild("Settings"):GetAttribute("MapName")
     if MapName then
         Alert("Map Loaded!" .. MapName)
     end
-    
-    -- Wait for character to be properly positioned
-    local maxWait = 10
-    local waited = 0
-    while waited < maxWait do
-        if Check("InGame") == true then
-            break
-        end
-        task.wait(0.1)
-        waited = waited + 0.1
-    end
-    
     if Check("InGame") == false then
         Alert("Skipping due to InGame == false.")
-        return -- Exit the function instead of continuing
     end
-    
     -- if Map Loaded and InGame code after this will run.
     local Buttons = {}
     -- Single Scan of Map to reduce lag.
@@ -106,18 +84,7 @@ local function OnMapLoad(Map)
             end
         end
     end
-    
-    -- Ensure character and components exist
-    local Character = GetChar()
-    if not Character then
-        return
-    end
-    
-    local HumanoidRootPart = Character:WaitForChild("HumanoidRootPart", 5)
-    if not HumanoidRootPart then
-        return
-    end
-    
+    local HumanoidRootPart = GetChar().HumanoidRootPart
     -- Grab Lost Page and Escapee
     local OriginalCFrame = HumanoidRootPart.CFrame
     local LostPage = Map:FindFirstChild("_LostPage", true)
@@ -143,34 +110,21 @@ local function OnMapLoad(Map)
             Alert("Got Escapee.")
         end
     end
-    
     -- Auto Farm Loop
     Alert("Commencing Auto Farm")
     local CurrentButton = nil
-    local Humanoid = Character:WaitForChild("Humanoid", 5)
-    if not Humanoid then
-        return
-    end
-    
+    local Humanoid = GetChar().Humanoid
     local GodMode
     GodMode = Humanoid:GetPropertyChangedSignal("Health"):Connect(function()
         Humanoid.Health = 1000
     end)
     local Attempts = 0
     local DifferentScan = false
-    
     while task.wait(CHECK_DELAY) and Check("InGame") do
         local ExitRegion = Map:FindFirstChild("ExitRegion", true)
-        -- Refresh character references in case of respawn
-        Character = GetChar()
-        if not Character then break end
-        HumanoidRootPart = Character:FindFirstChild("HumanoidRootPart")
-        Humanoid = Character:FindFirstChild("Humanoid")
-        if not HumanoidRootPart or not Humanoid then break end
-        
+        local HumanoidRootPart = GetChar().HumanoidRootPart
         Humanoid.Jump = true
         local FailedScan = true
-        
         if not ExitRegion then
             for i, Button in pairs(Buttons) do
                 local ButtonHitbox = Button:FindFirstChild("Hitbox")
@@ -220,93 +174,88 @@ local function OnMapLoad(Map)
             end
         end
     end
-    
-    -- Ensure character still exists before cleanup
-    Character = GetChar()
-    if Character then
-        Humanoid = Character:FindFirstChild("Humanoid")
-        if Humanoid then
-            Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
-        end
-    end
-    
+    Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
     task.wait(EXITREGION_WAIT)
     Alert("Complete.")
-    
     if GodMode then
         GodMode:Disconnect()
         GodMode = nil
     end
-    
     Alert("Preparing for next Map! Resetting..")
-    Character = GetChar()
-    if Character then
-        local Head = Character:FindFirstChild("Head")
-        if Head then
-            Head:Destroy()
-        end
-    end
-    
+    GetChar().Head:Destroy()
     Alert("Waiting for Player..")
     task.wait(2)
-    
-    Character = GetChar()
-    if Character then
-        local HumanoidRootPart = Character:WaitForChild("HumanoidRootPart", 10)
-        if HumanoidRootPart then
-            HumanoidRootPart.CFrame = HumanoidRootPart.CFrame + Vector3.new(0, 5, 0)
-            repeat
-                task.wait()
-                HumanoidRootPart.Velocity = Vector3.new(0, 0, 100)
-            until Check("InLift")
-        end
-    end
-    --ConnectMap()
+    local HumanoidRootPart = GetChar():WaitForChild("HumanoidRootPart")
+    HumanoidRootPart.CFrame = HumanoidRootPart.CFrame + Vector3.new(0, 5, 0)
+    repeat
+        task.wait()
+        HumanoidRootPart.Velocity = Vector3.new(0, 0, 100)
+    until Check("InLift")
+    Alert("Connecting..")
 end
 
 ConnectMap = function()
+    if MapDetect then
+        MapDetect:Disconnect()
+        MapDetect = nil
+    end
+    
     MapDetect = Multiplayer.ChildAdded:Connect(function(NewMap)
-        if MapDetect then
-            MapDetect:Disconnect()
-            MapDetect = nil
-        end
-        
-        -- Add safety check for map object
-        if not NewMap or not NewMap.Parent then
-            task.wait(1)
-            ConnectMap()
-            return
-        end
-        
-        -- Handle both fast and slow map loading
-        local function ProcessMap()
-            if NewMap and NewMap.Parent then
-                OnMapLoad(NewMap)
-                Alert("Connecting..")
-            else
-                task.wait(1)
-                ConnectMap()
-                return
-            end
-        end
-        
-        -- Check if map name already changed (fast loading)
-        if NewMap.Name ~= "Map" and NewMap.Name ~= "" then
-            -- Map already loaded, process immediately
-            ProcessMap()
-        else
-            -- Map still loading, wait for name change
-            local success, err = pcall(function()
-                NewMap:GetPropertyChangedSignal("Name"):Wait()
+        -- Don't disconnect immediately, let the handler complete
+        local success, err = pcall(function()
+            -- Wait for the map name to be set with timeout
+            local nameChanged = false
+            local nameConnection
+            local timeoutCoroutine
+            
+            -- Set up name change detection
+            nameConnection = NewMap:GetPropertyChangedSignal("Name"):Connect(function()
+                nameChanged = true
+                if nameConnection then
+                    nameConnection:Disconnect()
+                    nameConnection = nil
+                end
             end)
             
-            if success then
-                ProcessMap()
-            else
-                task.wait(0.5) -- Give it a moment
-                ProcessMap()
+            -- Set up timeout
+            timeoutCoroutine = coroutine.create(function()
+                task.wait(10) -- 10 second timeout
+                if nameConnection then
+                    nameConnection:Disconnect()
+                    nameConnection = nil
+                end
+                nameChanged = true -- Force continue after timeout
+            end)
+            coroutine.resume(timeoutCoroutine)
+            
+            -- Wait for name change or timeout
+            while not nameChanged and NewMap.Parent do
+                task.wait(0.1)
             end
+            
+            -- Clean up timeout if name changed before timeout
+            if nameConnection then
+                nameConnection:Disconnect()
+                nameConnection = nil
+            end
+            
+            -- Verify map is still valid before processing
+            if NewMap.Parent then
+                OnMapLoad(NewMap)
+            else
+                Alert("Map was removed before processing, reconnecting...")
+            end
+        end)
+        
+        if not success then
+            Alert("Error processing map: " .. tostring(err))
         end
+        
+        -- Always reconnect for next map, whether success or failure
+        task.spawn(function()
+            task.wait(1) -- Small delay to ensure current processing completes
+            ConnectMap()
+        end)
     end)
 end
 
@@ -317,7 +266,6 @@ if _G.LoopCancel ~= nil then
 end
 _G.LoopCancel = false
 Alert("Ready! Starting Update Loop.")
-
 while wait() do
     local function Cancel()
         Alert("Update Loop cancelled.")
@@ -326,22 +274,18 @@ while wait() do
             MapDetect = nil
         end
     end
-    
     if Check("InLift") == true and not MapDetect then
         ConnectMap()
     elseif Check("InLift") == false and MapDetect then
-        if MapDetect then
-            MapDetect:Disconnect()
-            MapDetect = nil
-        end
+        -- Don't disconnect here, let it stay connected for next map
+        -- MapDetect:Disconnect()
+        -- MapDetect = nil
     end
-    
     if _G.LoopCancel == true then
         _G.LoopCancel = false
         Cancel()
         break
     end
-    
     if getgenv().TomatoAutoFarm == false then
         Alert("Auto Farm Paused!")
         repeat wait() until getgenv().TomatoAutoFarm == true or _G.LoopCancel == true
