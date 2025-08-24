@@ -8,7 +8,7 @@ local EXITREGION_WAIT = 0
 
 local LocalPlayer = game:GetService("Players").LocalPlayer
 local Multiplayer = Workspace.Multiplayer
-local RunService = game:GetService("RunService")
+
 
 -- Cache frequently used objects
 local CLMAIN = LocalPlayer.PlayerScripts.CL_MAIN_GameScript
@@ -358,7 +358,7 @@ local function Cleanup()
     end
 end
 
--- Main loop with optimizations
+-- Main loop - keeping original structure but with optimizations
 if _G.LoopCancel ~= nil then
     _G.LoopCancel = true
     task.wait(0.1)
@@ -367,44 +367,34 @@ _G.LoopCancel = false
 
 Alert("Ready! Starting Update Loop.")
 
--- Use RunService for better performance
-local lastUpdateTime = 0
-local function UpdateLoop()
-    local currentTime = tick()
-    if currentTime - lastUpdateTime < 0.1 then -- Limit to 10 FPS for main loop
-        return
+while wait() do
+    local function Cancel()
+        Alert("Update Loop cancelled.")
+        Cleanup()
     end
-    lastUpdateTime = currentTime
+    
+    if Check("InLift") == true and not MapDetect then
+        ConnectMap()
+    elseif Check("InLift") == false and MapDetect then
+        -- Don't disconnect here, let it stay connected for next map
+    end
     
     if _G.LoopCancel == true then
         _G.LoopCancel = false
-        Alert("Update Loop cancelled.")
-        Cleanup()
-        return
+        Cancel()
+        break
     end
     
     if getgenv().TomatoAutoFarm == false then
         Alert("Auto Farm Paused!")
-        repeat 
-            task.wait(0.1) 
-        until getgenv().TomatoAutoFarm == true or _G.LoopCancel == true
+        repeat wait() until getgenv().TomatoAutoFarm == true or _G.LoopCancel == true
         Alert("Auto Farm Resumed!")
     end
-    
-    local inLift = Check("InLift")
-    if inLift and not MapDetect then
-        ConnectMap()
-    end
 end
-
-local loopConnection = RunService.Heartbeat:Connect(UpdateLoop)
 
 -- Cleanup on script end
 game:GetService("Players").PlayerRemoving:Connect(function(player)
     if player == LocalPlayer then
         Cleanup()
-        if loopConnection then
-            loopConnection:Disconnect()
-        end
     end
 end)
