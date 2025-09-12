@@ -1,6 +1,4 @@
-# Improved Tomato Auto Farm (In Dev)
+# Auto Farm (Beta)
 ```lua
---if you want it to be on when executed do:
---getgenv().TomatoAutoFarm = true
-loadstring(game:HttpGet("https://raw.githubusercontent.com/nvkob1/rbxscripts/refs/heads/main/FloodEscape2/minigui.lua"))()
+loadstring(game:HttpGet("fafsfafa"))()
 ```
