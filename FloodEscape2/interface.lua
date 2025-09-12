@@ -197,20 +197,10 @@ local AutoFarmToggle = Tabs.Main:AddToggle("AutoFarm", {Title = "Auto Farm", Def
 AutoFarmToggle:OnChanged(function()
     AutoFarmEnabled = AutoFarmToggle.Value
     if AutoFarmEnabled then
-        Fluent:Notify({
-            Title = "AutoFarm",
-            Content = "AutoFarm enabled",
-            Duration = 3
-        })
         if isPlayerAlive() then
             onPlayerRespawn()
         end
     else
-        Fluent:Notify({
-            Title = "AutoFarm", 
-            Content = "AutoFarm disabled",
-            Duration = 3
-        })
         if MapDetect then
             MapDetect:Disconnect()
             MapDetect = nil
