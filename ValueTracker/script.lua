@@ -9,7 +9,7 @@ local defaultConfig = {
     ScriptName = "Money Tracker",
     IntervalSeconds = 3600,
     Webhook = "",
-    ValueLocation = "game:GetService(\"Players\").LocalPlayer.leaderstats.Money"
+    ValueLocation = "game:GetService("Players").LocalPlayer.leaderstats.Money"
 }
 
 local config = getgenv().Config or defaultConfig
