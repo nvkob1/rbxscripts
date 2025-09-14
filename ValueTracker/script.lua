@@ -1,99 +1,101 @@
--- Configuration
-local config = config or {
-    ScriptName = "Unknown",
-    Interval = 3600, -- Seconds (1 hour)
-    Webhook = "YOUR_WEBHOOK_URL_HERE", -- Replace with your webhook URL
-    ValuePath = "" -- Path to value
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local Workspace = game:GetService("Workspace")
+
+local player = Players.LocalPlayer
+
+-- Default config if none provided
+local defaultConfig = {
+    ScriptName = "Money Tracker",
+    IntervalSeconds = 3600,
+    Webhook = "",
+    ValueLocation = "game:GetService(\"Players\").LocalPlayer.leaderstats.Money"
 }
 
-local Players = game:GetService("Players")
-local MarketplaceService = game:GetService("MarketplaceService")
-local HttpService = game:GetService("HttpService")
-local StarterGui = game:GetService("StarterGui")
+local config = getgenv().Config or defaultConfig
 
--- Check webhook and value path validity
-if config.Webhook == "YOUR_WEBHOOK_URL_HERE" or config.Webhook == "" then
-    StarterGui:SetCore("SendNotification", {
-        Title = "Error",
-        Text = "Webhook URL is required. Please set a valid webhook URL in the config.",
-        Duration = 10
-    })
-    error("Webhook URL is required.")
+-- Validate required config
+if not config.Webhook or config.Webhook == "" then
+    error("Webhook URL is required in config")
+    return
 end
 
-if config.ValuePath == "" then
-    StarterGui:SetCore("SendNotification", {
-        Title = "Error",
-        Text = "Value path is required. Please set a valid value path in the config.",
-        Duration = 10
-    })
-    error("Value path is required.")
+if not config.ValueLocation or config.ValueLocation == "" then
+    error("ValueLocation is required in config")
+    return
 end
 
--- Get money value from path
-local money
-local success, result = pcall(function()
-    return loadstring("return " .. config.ValuePath)()
-end)
-if success and result then
-    money = result
-else
-    StarterGui:SetCore("SendNotification", {
-        Title = "Error",
-        Text = "Invalid value path. Ensure it points to a valid IntValue (e.g., game:GetService('Players').LocalPlayer.leaderstats.Money).",
-        Duration = 10
-    })
-    error("Invalid value path.")
+local function request(url, data)
+    local success, result = pcall(function()
+        return game:HttpPost(url, game:GetService("HttpService"):JSONEncode(data))
+    end)
+    if not success then
+        warn("Webhook request failed: " .. tostring(result))
+    end
 end
 
-local mapName = MarketplaceService:GetProductInfo(game.PlaceId).Name
-
--- Test webhook
-local success, response = pcall(function()
-    request({
-        Url = config.Webhook,
-        Method = "POST",
-        Headers = {["Content-Type"] = "application/json"},
-        Body = HttpService:JSONEncode({content = "Started"})
-    })
-end)
-
-if not success or response.StatusCode >= 400 then
-    StarterGui:SetCore("SendNotification", {
-        Title = "Error",
-        Text = "Invalid webhook URL. Please check the webhook and try again.",
-        Duration = 10
-    })
-    error("Invalid webhook URL.")
+local function getValueFromPath(path)
+    local success, result = pcall(function()
+        return loadstring("return " .. path)()
+    end)
+    return success and result or nil
 end
 
-while true do
-    local initialMoney = money.Value
-    local startTime = os.clock()
-    wait(config.Interval)
-    local endTime = os.clock()
-    local elapsed = endTime - startTime
-    local currentMoney = money.Value
-    local gained = currentMoney - initialMoney
-    local perHour = math.round(gained * (3600 / elapsed))
-    local duration = tostring(config.Interval) .. " seconds"
+local function getMapName()
+    return Workspace.Name or "Unknown Map"
+end
+
+local function formatTime(seconds)
+    local hours = math.floor(seconds / 3600)
+    local minutes = math.floor((seconds % 3600) / 60)
+    local secs = seconds % 60
+    return string.format("%02d:%02d:%02d", hours, minutes, secs)
+end
+
+local function sendWebhook(startMoney, currentMoney, duration)
+    local gained = currentMoney - startMoney
+    local perHour = math.floor((gained / duration) * 3600)
     
-    local embed = {
-        title = config.ScriptName .. " Report",
-        color = 3447003,
-        fields = {
-            {name = "Map Name", value = mapName, inline = true},
-            {name = "Money Gained", value = tostring(gained), inline = true},
-            {name = "Duration", value = duration, inline = true},
-            {name = "Money Per Hour", value = tostring(perHour), inline = true}
-        },
-        timestamp = os.date("!%Y-%m-%dT%H:%M:%SZ")
+    local data = {
+        content = string.format(
+            "**%s Report**\n" ..
+            "🗺️ Map: %s\n" ..
+            "💰 Money Gained: %d\n" ..
+            "⏱️ Duration: %s\n" ..
+            "📈 Money Per Hour: %d",
+            config.ScriptName,
+            getMapName(),
+            gained,
+            formatTime(duration),
+            perHour
+        )
     }
     
-    request({
-        Url = config.Webhook,
-        Method = "POST",
-        Headers = {["Content-Type"] = "application/json"},
-        Body = HttpService:JSONEncode({embeds = {embed}})
-    })
+    request(config.Webhook, data)
+end
+
+local startTime = tick()
+local moneyValue = getValueFromPath(config.ValueLocation)
+
+if not moneyValue then
+    error("Invalid ValueLocation: " .. config.ValueLocation .. " - Could not find value")
+    return
+end
+
+local startMoney = moneyValue.Value
+
+while player.Parent do
+    wait(config.IntervalSeconds)
+    
+    moneyValue = getValueFromPath(config.ValueLocation)
+    if moneyValue then
+        local currentMoney = moneyValue.Value
+        local duration = tick() - startTime
+        
+        sendWebhook(startMoney, currentMoney, duration)
+        startMoney = currentMoney
+        startTime = tick()
+    else
+        warn("ValueLocation became invalid during runtime")
+    end
 end
