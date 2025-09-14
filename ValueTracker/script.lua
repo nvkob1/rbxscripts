@@ -14,11 +14,6 @@ local defaultConfig = {
 
 local config = getgenv().Config or defaultConfig
 
--- Fix quotes in ValueLocation for better UX
-if config.ValueLocation then
-    config.ValueLocation = config.ValueLocation:gsub('"', '\\"')
-end
-
 -- Validate required config
 if not config.Webhook or config.Webhook == "" then
     error("Webhook URL is required in config")
