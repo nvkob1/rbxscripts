@@ -4,7 +4,6 @@ local function createMobileToggleButton()
    local player = Players.LocalPlayer
    local playerGui = player:FindFirstChild("PlayerGui") or game:GetService("CoreGui")
 
-   -- Remove existing button if it exists
    local existingGui = playerGui:FindFirstChild("FluentToggleButton")
    if existingGui then
        existingGui:Destroy()
@@ -34,24 +33,22 @@ local function createMobileToggleButton()
    UICorner.CornerRadius = UDim.new(0.5, 0)
    UICorner.Parent = ToggleButton
 
-   -- Check if user is on mobile
-   if UserInputService.TouchEnabled and not UserInputService.MouseEnabled then
-       -- Mobile dragging
-       ToggleButton.Draggable = true
-       ToggleButton.Selectable = true
-       ToggleButton.Active = true
-   else
-       -- Desktop dragging
-       local dragging = false
-       local dragStart
-       local startPos
+   local dragging = false
+   local dragStart
+   local startPos
 
+   local function setupDragging()
+       ToggleButton.Draggable = false
+       ToggleButton.Selectable = false
+       ToggleButton.Active = false
+       
        local function updateInput(input)
            local delta = input.Position - dragStart
            ToggleButton.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
        end
 
-       ToggleButton.InputBegan:Connect(function(input)
+       local conn1, conn2, conn3
+       conn1 = ToggleButton.InputBegan:Connect(function(input)
            if input.UserInputType == Enum.UserInputType.MouseButton1 then
                dragging = true
                dragStart = input.Position
@@ -59,26 +56,49 @@ local function createMobileToggleButton()
            end
        end)
 
-       ToggleButton.InputEnded:Connect(function(input)
+       conn2 = ToggleButton.InputEnded:Connect(function(input)
            if input.UserInputType == Enum.UserInputType.MouseButton1 then
                dragging = false
            end
        end)
 
-       UserInputService.InputChanged:Connect(function(input)
+       conn3 = UserInputService.InputChanged:Connect(function(input)
            if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
                updateInput(input)
            end
        end)
+
+       return {conn1, conn2, conn3}
    end
 
-   -- When the button is clicked, toggle the Fluent UI window visibility.
+   local function setupMobile()
+       ToggleButton.Draggable = true
+       ToggleButton.Selectable = true
+       ToggleButton.Active = true
+   end
+
+   local connections = {}
+   local function updateDeviceType()
+       for _, conn in ipairs(connections) do
+           conn:Disconnect()
+       end
+       connections = {}
+       
+       if UserInputService.TouchEnabled and not UserInputService.MouseEnabled then
+           setupMobile()
+       else
+           connections = setupDragging()
+       end
+   end
+
+   UserInputService:GetPropertyChangedSignal("TouchEnabled"):Connect(updateDeviceType)
+   UserInputService:GetPropertyChangedSignal("MouseEnabled"):Connect(updateDeviceType)
+   updateDeviceType()
+
    ToggleButton.MouseButton1Click:Connect(function()
        if getgenv().Fluent and getgenv().Fluent.Window then
            getgenv().Fluent.Window:Minimize()
        end
-
-       -- Visual feedback for the click
        ToggleButton.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
        task.delay(0.1, function()
            ToggleButton.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
