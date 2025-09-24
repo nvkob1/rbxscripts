@@ -162,7 +162,7 @@ function Hop()
 end
 
 game.Players.LocalPlayer.OnTeleport:Connect(function()
-    queue_on_teleport('loadstring(game:HttpGet("YOUR_SCRIPT_URL_HERE"))()')
+    queue_on_teleport('loadstring(game:HttpGet("https://raw.githubusercontent.com/nvkob1/rbxscripts/refs/heads/main/Blox%20Fruits/FullMoonFinder.lua"))()')
 end)
 
 if CheckMoonAndExecute() then
