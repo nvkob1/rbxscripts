@@ -1,3 +1,7 @@
+repeat task.wait() until game:IsLoaded()
+repeat task.wait() until game.Players
+repeat task.wait() until game.Players.LocalPlayer
+repeat task.wait() until game.Players.LocalPlayer:FindFirstChild("PlayerGui")
 local Moon = {
 ['8'] = "http://www.roblox.com/asset/?id=9709149431",
 ['7'] = "http://www.roblox.com/asset/?id=9709149052",
