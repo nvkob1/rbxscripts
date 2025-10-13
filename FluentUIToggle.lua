@@ -1,10 +1,8 @@
 local function createMobileToggleButton()
    local UserInputService = game:GetService("UserInputService")
-   local Players = game:GetService("Players")
-   local player = Players.LocalPlayer
-   local playerGui = player:FindFirstChild("PlayerGui") or game:GetService("CoreGui")
+   local CoreGui = game:GetService("CoreGui")
 
-   local existingGui = playerGui:FindFirstChild("FluentToggleButton")
+   local existingGui = CoreGui:FindFirstChild("FluentToggleButton")
    if existingGui then
        existingGui:Destroy()
    end
@@ -105,7 +103,7 @@ local function createMobileToggleButton()
        end)
    end)
 
-   ToggleGui.Parent = playerGui
+   ToggleGui.Parent = CoreGui
    return ToggleGui
 end
 
