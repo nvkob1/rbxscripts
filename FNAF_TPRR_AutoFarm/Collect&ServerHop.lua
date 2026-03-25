@@ -1,4 +1,5 @@
-task.wait(2)
+local Players = game:GetService("Players")
+repeat task.wait(2.5) until game:IsLoaded() and Players.LocalPlayer
 
 local player = game.Players.LocalPlayer or game.Players:GetPropertyChangedSignal("LocalPlayer"):Wait()
 local runService = game:GetService("RunService")
