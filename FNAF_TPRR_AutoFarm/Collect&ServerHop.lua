@@ -13,11 +13,11 @@ if loadingGui then
 end
 
 local function serverHop()
-     loadstring(game:HttpGet('https://raw.githubusercontent.com/nvkob1/rbxscripts/refs/heads/main/FNAF_TPRR_AutoFarm/ServerHopper.lua'))()
+    loadstring(game:HttpGet('https://raw.githubusercontent.com/nvkob1/rbxscripts/refs/heads/main/FNAF_TPRR_AutoFarm/ServerHopper.lua'))()
 end
 
--- Force hop after 16 seconds
-task.delay(16, function()
+-- Start 12s countdown after loading screen is gone
+task.delay(12, function()
     serverHop()
 end)
 
