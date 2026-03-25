@@ -16,8 +16,8 @@ local function serverHop()
     loadstring(game:HttpGet('https://raw.githubusercontent.com/nvkob1/rbxscripts/refs/heads/main/FNAF_TPRR_AutoFarm/ServerHopper.lua'))()
 end
 
--- Start 12s countdown after loading screen is gone
-task.delay(12, function()
+-- Start 15s countdown after loading screen is gone
+task.delay(15, function()
     serverHop()
 end)
 
