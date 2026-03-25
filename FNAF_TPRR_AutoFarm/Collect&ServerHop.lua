@@ -13,7 +13,7 @@ if loadingGui then
 end
 
 local function serverHop()
-    loadstring(game:HttpGet('https://raw.githubusercontent.com/Cesare0328/my-scripts/refs/heads/main/CachedServerhop.lua'))()
+    loadstring(game:HttpGet('https://raw.githubusercontent.com/nvkob1/rbxscripts/refs/heads/main/FNAF_TPRR_AutoFarm/ServerHopper.lua'))()
 end
 
 local lastSpawn = 0
