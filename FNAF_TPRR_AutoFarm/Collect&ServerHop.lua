@@ -16,8 +16,8 @@ local function serverHop()
      loadstring(game:HttpGet('https://raw.githubusercontent.com/nvkob1/rbxscripts/refs/heads/main/FNAF_TPRR_AutoFarm/ServerHopper.lua'))()
 end
 
--- Force hop after 16 seconds
-task.delay(16, function()
+-- Force hop after 10 seconds
+task.delay(10, function()
     serverHop()
 end)
 
