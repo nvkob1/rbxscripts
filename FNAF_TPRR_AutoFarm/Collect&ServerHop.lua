@@ -13,8 +13,13 @@ if loadingGui then
 end
 
 local function serverHop()
-    loadstring(game:HttpGet('https://raw.githubusercontent.com/nvkob1/rbxscripts/refs/heads/main/FNAF_TPRR_AutoFarm/ServerHopper.lua'))()
+     loadstring(game:HttpGet('https://raw.githubusercontent.com/nvkob1/rbxscripts/refs/heads/main/FNAF_TPRR_AutoFarm/ServerHopper.lua'))()
 end
+
+-- Force hop after 20 seconds
+task.delay(20, function()
+    serverHop()
+end)
 
 local lastSpawn = 0
 
@@ -29,7 +34,6 @@ local function ensureSpawned()
         end
         task.wait(0.1)
     end
-    -- Wait for character to fully load
     task.wait(1)
 end
 
