@@ -1,6 +1,4 @@
--- UI Toggle with custom logo and larger, tap-friendly design
 local UserInputService = game:GetService("UserInputService")
-local TweenService = game:GetService("TweenService")
 local CoreGui = game:GetService("CoreGui")
 
 local hiddenUI = gethui and gethui() or CoreGui
@@ -16,7 +14,6 @@ ToggleGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ToggleGui.DisplayOrder = 999999
 ToggleGui.Parent = hiddenUI
 
--- Increased size for easier mobile usage
 local ToggleButton = Instance.new("ImageButton")
 ToggleButton.Size = UDim2.new(0, 65, 0, 65) 
 ToggleButton.Position = UDim2.new(0.05, 0, 0.05, 0)
@@ -29,7 +26,6 @@ local UICorner = Instance.new("UICorner")
 UICorner.CornerRadius = UDim.new(0.5, 0)
 UICorner.Parent = ToggleButton
 
--- Fetch and apply the requested logo
 task.spawn(function()
     local success, response = pcall(function()
         return request({
@@ -39,44 +35,54 @@ task.spawn(function()
     end)
     
     if success and response and response.StatusCode == 200 then
-        writefile("WaveLogo.png", response.Body)
-        ToggleButton.Image = getcustomasset("WaveLogo.png")
+        writefile("nvkob1.png", response.Body)
+        ToggleButton.Image = getcustomasset("nvkob1.png")
     end
 end)
 
-local dragging, dragStart, startPos
+local dragging = false
+local dragInput, dragStart, startPos
+local hasDragged = false
+
+local function update(input)
+    local delta = input.Position - dragStart
+    if delta.Magnitude > 5 then
+        hasDragged = true
+    end
+    ToggleButton.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+end
 
 ToggleButton.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
         dragging = true
+        hasDragged = false
         dragStart = input.Position
         startPos = ToggleButton.Position
         
-        -- Shrink slightly for visual feedback
-        TweenService:Create(ToggleButton, TweenInfo.new(0.1), {Size = UDim2.new(0, 60, 0, 60)}):Play()
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
     end
 end)
 
-ToggleButton.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        dragging = false
-        
-        -- Restore size
-        TweenService:Create(ToggleButton, TweenInfo.new(0.1), {Size = UDim2.new(0, 65, 0, 65)}):Play()
+ToggleButton.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        dragInput = input
     end
 end)
 
 UserInputService.InputChanged:Connect(function(input)
-    if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-        local delta = input.Position - dragStart
-        TweenService:Create(ToggleButton, TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-            Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-        }):Play()
+    if input == dragInput and dragging then
+        update(input)
     end
 end)
 
-ToggleButton.MouseButton1Click:Connect(function()
-    if getgenv().Fluent and getgenv().Fluent.Window then
-        getgenv().Fluent.Window:Minimize()
+ToggleButton.Activated:Connect(function()
+    if not hasDragged then
+        if getgenv().Fluent and getgenv().Fluent.Window then
+            getgenv().Fluent.Window:Minimize()
+        end
     end
 end)
