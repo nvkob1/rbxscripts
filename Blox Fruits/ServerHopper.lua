@@ -3,6 +3,7 @@ getgenv().ServerHopConfig = getgenv().ServerHopConfig or {
     LowPlayers = true
 }
 local ServerBrowser = game:GetService("ReplicatedStorage"):WaitForChild("__ServerBrowser")
+local RemoveErrorPrompts = true
 
 function ServerHop()
     local config = getgenv().ServerHopConfig
@@ -58,6 +59,8 @@ function ServerHop()
         print(("[ServerHop] Attempt %d: Joining Job: %s | Region: %s | Players: %s"):format(
             attempt, target.Job, tostring(target.Region), tostring(target.Count)
         ))
+
+        if RemoveErrorPrompts then CoreGui:WaitForChild("RobloxGui"):WaitForChild("Modules"):WaitForChild("ErrorPrompt"):Destroy() CoreGui.RobloxPromptGui:Destroy() end
 
         local ok = pcall(function() ServerBrowser:InvokeServer("teleport", target.Job) end)
         if ok then
