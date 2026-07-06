@@ -112,6 +112,7 @@ end)
 
 if CheckMoonAndExecute() then
     -- Full moon found, stop execution
+	clearteleportqueue()
 else
     -- Continue hopping
     Hop()
