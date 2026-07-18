@@ -10,13 +10,13 @@ loadstring(game:HttpGet("https://raw.githubusercontent.com/nvkob1/rbxscripts/ref
         "getgenv",
         "task.spawn",
         "task.wait",
-        "firetouchinterest",
-        "gethui"
+        "firetouchinterest"
     },
     optionalFunctions = {
         "cloneref",
         "hookmetamethod",
-        "getrawmetatable"
+        "getrawmetatable",
+        "gethui"
     },
     mainScript = function()
         loadstring(game:HttpGet("https://raw.githubusercontent.com/nvkob1/rbxscripts/refs/heads/main/%2B1MuscletoBreakWalls/script.lua"))()
