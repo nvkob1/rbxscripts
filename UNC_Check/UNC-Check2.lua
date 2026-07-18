@@ -2,36 +2,34 @@ return function(config)
     local SCRIPT_NAME = config.scriptName or "Script"
     local MAIN_SCRIPT = config.mainScript
 
-    local env = (getgenv and getgenv()) or {}
-
     local function checkUNCCompatibility()
-        local requiredFunctions = config.requiredFunctions or {
-            "loadstring",
-            "isfolder",
-            "makefolder",
-            "writefile",
-            "isfile",
-            "getgenv"
+        local required = {
+            loadstring = loadstring,
+            isfolder = isfolder,
+            makefolder = makefolder,
+            writefile = writefile,
+            isfile = isfile,
+            getgenv = getgenv
+        }
+
+        local optional = {
+            cloneref = cloneref,
+            hookmetamethod = hookmetamethod,
+            getrawmetatable = getrawmetatable
         }
 
         local missingFunctions = {}
         local warnings = {}
 
-        for _, funcName in ipairs(requiredFunctions) do
-            if not env[funcName] and not getfenv()[funcName] then
-                table.insert(missingFunctions, funcName)
+        for name, func in pairs(required) do
+            if not func then
+                table.insert(missingFunctions, name)
             end
         end
 
-        local optionalFunctions = config.optionalFunctions or {
-            "cloneref",
-            "hookmetamethod",
-            "getrawmetatable"
-        }
-
-        for _, funcName in ipairs(optionalFunctions) do
-            if not env[funcName] and not getfenv()[funcName] then
-                table.insert(warnings, funcName)
+        for name, func in pairs(optional) do
+            if not func then
+                table.insert(warnings, name)
             end
         end
 
@@ -67,7 +65,6 @@ return function(config)
 
     if MAIN_SCRIPT and type(MAIN_SCRIPT) == "function" then
         local success, err = pcall(MAIN_SCRIPT)
-
         if not success then
             sendNotification("❌ Execution Failed!", "Check console for details", 8)
             print("❌ SCRIPT EXECUTION ERROR!\n\nError details:\n" .. tostring(err))
