@@ -10,7 +10,8 @@ loadstring(game:HttpGet("https://raw.githubusercontent.com/nvkob1/rbxscripts/ref
         "getgenv",
         "task.spawn",
         "task.wait",
-        "firetouchinterest"
+        "firetouchinterest",
+        "gethui"
     },
     optionalFunctions = {
         "cloneref",
