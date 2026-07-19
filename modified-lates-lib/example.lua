@@ -362,7 +362,7 @@ Window:AddDropdown({
 Window:AddToggle({
 	Title = "UI Blur",
 	Description = "If enabled, must have your Roblox graphics set to 8+ for it to work",
-	Default = true,
+	Default = false,
 	Flag = "Blur",
 	Tab = Settings,
 	Callback = function(Boolean) 
@@ -377,7 +377,7 @@ Window:AddSlider({
 	Tab = Settings,
 	AllowDecimals = true,
 	MaxValue = 1,
-	Default = 0.2,
+	Default = 0,
 	Flag = "Transparency",
 	Callback = function(Amount) 
 		Window:SetSetting("Transparency", Amount)
