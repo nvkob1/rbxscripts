@@ -11,7 +11,7 @@ local VirtualUser = game:GetService("VirtualUser")
 local HttpService = game:GetService("HttpService")
 
 --// Library
-local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source"))()
+local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/nvkob1/rbxscripts/refs/heads/main/lates-lib/Main.lua"))()
 local Window = Library:CreateWindow({
 	Title = "???",
 	Theme = "Dark",
