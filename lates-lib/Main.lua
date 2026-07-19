@@ -51,6 +51,7 @@ local Services = {
 	Tween = GetService(game, "TweenService");
 	Run = GetService(game, "RunService");
 	Input = GetService(game, "UserInputService");
+	Http = GetService(game, "HttpService");
 }
 
 local Player = {
@@ -290,22 +291,55 @@ end
 
 --// Library [Window]
 
-function Library:CreateWindow(Settings: { Title: string, Size: UDim2, Transparency: number, MinimizeKeybind: Enum.KeyCode?, Blurring: boolean, Theme: string })
+function Library:CreateWindow(Settings: { Title: string, Size: UDim2, Transparency: number, MinimizeKeybind: Enum.KeyCode?, Blurring: boolean, Theme: string, Folder: string?, FileName: string? })
 	local Window = Clone(Screen:WaitForChild("Main"));
 	local Sidebar = Window:FindFirstChild("Sidebar");
 	local Holder = Window:FindFirstChild("Main");
 	local BG = Window:FindFirstChild("BackgroundShadow");
 	local Tab = Sidebar:FindFirstChild("Tab");
+	
+	-- Convert Tab to a ScrollingFrame if it's a regular Frame so it can scroll
+	if Tab and not Tab:IsA("ScrollingFrame") then
+		local ScrollingTab = Instance.new("ScrollingFrame")
+		ScrollingTab.Name = "Tab"
+		ScrollingTab.Size = Tab.Size
+		ScrollingTab.Position = Tab.Position
+		ScrollingTab.BackgroundTransparency = Tab.BackgroundTransparency
+		ScrollingTab.BackgroundColor3 = Tab.BackgroundColor3
+		ScrollingTab.BorderSizePixel = Tab.BorderSizePixel
+		ScrollingTab.CanvasSize = UDim2.new(0, 0, 0, 0)
+		ScrollingTab.AutomaticCanvasSize = Enum.AutomaticSize.Y
+		ScrollingTab.ScrollBarThickness = 0
+		
+		for _, child in ipairs(Tab:GetChildren()) do
+			child.Parent = ScrollingTab
+		end
+		
+		ScrollingTab.Parent = Tab.Parent
+		Tab:Destroy()
+		Tab = ScrollingTab
+	elseif Tab then
+		Tab.AutomaticCanvasSize = Enum.AutomaticSize.Y
+		Tab.ScrollBarThickness = 0
+	end
 
-	local Options = {};
+	local Options = {
+		Flags = {},
+		Folder = Settings.Folder or "LatesLibrary",
+		FileName = Settings.FileName or "config.json"
+	};
 	local Examples = {};
 	local Opened = true;
 	local Maximized = false;
 	local BlurEnabled = false
 
-	for Index, Example in next, Window:GetDescendants() do
-		if Example.Name:find("Example") and not Examples[Example.Name] then
-			Examples[Example.Name] = Example
+	for Index, Descendant in next, Window:GetDescendants() do
+		if Descendant.Name:find("Example") and not Examples[Descendant.Name] then
+			Examples[Descendant.Name] = Descendant
+		end
+		
+		if Descendant:IsA("ScrollingFrame") then
+			Descendant.AutomaticCanvasSize = Enum.AutomaticSize.Y
 		end
 	end
 
@@ -531,18 +565,37 @@ function Library:CreateWindow(Settings: { Title: string, Size: UDim2, Transparen
 		})
 	end
 
-	function Options:AddInput(Settings: { Title: string, Description: string, Tab: Instance, Callback: any }) 
+	function Options:AddInput(Settings: { Title: string, Description: string, Default: string?, Flag: string?, Tab: Instance, Callback: any }) 
 		local Input = Clone(Components["Input"]);
 		local Title, Description = Options:GetLabels(Input);
 		local TextBox = Input["Main"]["Input"];
+
+		local Set = function(Value)
+			TextBox.Text = Value
+			Settings.Callback(Value)
+			if Settings.Flag then
+				if not Options.Flags[Settings.Flag] then
+					Options.Flags[Settings.Flag] = {}
+				end
+				Options.Flags[Settings.Flag].Value = Value
+			end
+		end
 
 		Connect(Input.MouseButton1Click, function() 
 			TextBox:CaptureFocus()
 		end)
 
 		Connect(TextBox.FocusLost, function() 
-			Settings.Callback(TextBox.Text)
+			Set(TextBox.Text)
 		end)
+		
+		if Settings.Default then
+			Set(Settings.Default)
+		end
+		
+		if Settings.Flag then
+			Options.Flags[Settings.Flag] = { Value = Settings.Default or "", Set = Set }
+		end
 
 		Animations:Component(Input)
 		SetProperty(Title, { Text = Settings.Title });
@@ -554,7 +607,7 @@ function Library:CreateWindow(Settings: { Title: string, Size: UDim2, Transparen
 		})
 	end
 
-	function Options:AddToggle(Settings: { Title: string, Description: string, Default: boolean, Tab: Instance, Callback: any }) 
+	function Options:AddToggle(Settings: { Title: string, Description: string, Default: boolean, Flag: string?, Tab: Instance, Callback: any }) 
 		local Toggle = Clone(Components["Toggle"]);
 		local Title, Description = Options:GetLabels(Toggle);
 
@@ -572,7 +625,24 @@ function Library:CreateWindow(Settings: { Title: string, Size: UDim2, Transparen
 			end
 			
 			On.Value = Value
+			
+			if Settings.Flag then
+				if not Options.Flags[Settings.Flag] then
+					Options.Flags[Settings.Flag] = {}
+				end
+				Options.Flags[Settings.Flag].Value = Value
+			end
 		end 
+		
+		if Settings.Flag then
+			Options.Flags[Settings.Flag] = { 
+				Value = Settings.Default, 
+				Set = function(val) 
+					Set(val) 
+					Settings.Callback(val) 
+				end 
+			}
+		end
 
 		Connect(Toggle.MouseButton1Click, function()
 			local Value = not On.Value
@@ -592,7 +662,7 @@ function Library:CreateWindow(Settings: { Title: string, Size: UDim2, Transparen
 		})
 	end
 	
-	function Options:AddKeybind(Settings: { Title: string, Description: string, Tab: Instance, Callback: any }) 
+	function Options:AddKeybind(Settings: { Title: string, Description: string, Default: any, Flag: string?, Tab: Instance, Callback: any }) 
 		local Dropdown = Clone(Components["Keybind"]);
 		local Title, Description = Options:GetLabels(Dropdown);
 		local Bind = Dropdown["Main"].Options;
@@ -603,6 +673,25 @@ function Library:CreateWindow(Settings: { Title: string, Size: UDim2, Transparen
 			["Key"] = "Enum.KeyCode." 
 		}
 		
+		local Set = function(Key)
+			local Type = typeof(Key) == "EnumItem" and Key or (Key.UserInputType == Enum.UserInputType.Keyboard and Key.KeyCode or Key.UserInputType)
+			local Str = tostring(Type)
+			
+			if Str:find("UserInputType") then
+				SetProperty(Bind, { Text = Str:gsub(Types.Mouse, "MB") })
+			else
+				SetProperty(Bind, { Text = Str:gsub(Types.Key, "") })
+			end
+			Settings.Callback(Key)
+			
+			if Settings.Flag then
+				if not Options.Flags[Settings.Flag] then
+					Options.Flags[Settings.Flag] = {}
+				end
+				Options.Flags[Settings.Flag].Value = Type.Name
+			end
+		end
+
 		Connect(Dropdown.MouseButton1Click, function()
 			local Time = tick();
 			local Detect, Finished
@@ -614,20 +703,30 @@ function Library:CreateWindow(Settings: { Title: string, Size: UDim2, Transparen
 				if not Finished and not Focused then
 					Finished = (true)
 					
-					if table.find(Mouse, InputType) then
-						Settings.Callback(Key);
-						SetProperty(Bind, {
-							Text = tostring(InputType):gsub(Types.Mouse, "MB")
-						})
-					elseif InputType == Enum.UserInputType.Keyboard then
-						Settings.Callback(Key);
-						SetProperty(Bind, {
-							Text = tostring(Key.KeyCode):gsub(Types.Key, "")
-						})
+					if table.find(Mouse, InputType) or InputType == Enum.UserInputType.Keyboard then
+						Set(Key)
 					end
 				end 
 			end)
 		end)
+		
+		if Settings.Default then
+			Set(Settings.Default)
+		end
+		
+		if Settings.Flag then
+			Options.Flags[Settings.Flag] = { 
+				Value = Settings.Default and Settings.Default.Name or "", 
+				Set = function(val)
+					pcall(function()
+						local foundEnum = Enum.KeyCode[val] or Enum.UserInputType[val]
+						if foundEnum then
+							Set(foundEnum)
+						end
+					end)
+				end
+			}
+		end
 
 		Animations:Component(Dropdown);
 		SetProperty(Title, { Text = Settings.Title });
@@ -639,10 +738,37 @@ function Library:CreateWindow(Settings: { Title: string, Size: UDim2, Transparen
 		})
 	end
 
-	function Options:AddDropdown(Settings: { Title: string, Description: string, Options: {}, Tab: Instance, Callback: any }) 
+	function Options:AddDropdown(Settings: { Title: string, Description: string, Options: {}, Flag: string?, Default: any, Tab: Instance, Callback: any }) 
 		local Dropdown = Clone(Components["Dropdown"]);
 		local Title, Description = Options:GetLabels(Dropdown);
 		local Text = Dropdown["Main"].Options;
+		
+		local Set = function(Value)
+			local textIndex = tostring(Value)
+			for k, v in pairs(Settings.Options) do
+				if v == Value or k == Value then
+					textIndex = k
+					break
+				end
+			end
+			Text.Text = textIndex
+			Settings.Callback(Value)
+			
+			if Settings.Flag then
+				if not Options.Flags[Settings.Flag] then
+					Options.Flags[Settings.Flag] = {}
+				end
+				Options.Flags[Settings.Flag].Value = Value
+			end
+		end
+
+		if Settings.Default then
+			Set(Settings.Default)
+		end
+		
+		if Settings.Flag then
+			Options.Flags[Settings.Flag] = { Value = Settings.Default, Set = Set }
+		end
 
 		Connect(Dropdown.MouseButton1Click, function()
 			local Example = Clone(Examples["DropdownExample"]);
@@ -680,8 +806,7 @@ function Library:CreateWindow(Settings: { Title: string, Size: UDim2, Transparen
 
 					if NewValue then
 						Tween(Button, .25, { BackgroundColor3 = Theme.Interactables });
-						Settings.Callback(Option)
-						Text.Text = Index
+						Set(Option)
 
 						for _, Others in next, Example:GetChildren() do
 							if Others:IsA("TextButton") and Others ~= Button then
@@ -711,7 +836,7 @@ function Library:CreateWindow(Settings: { Title: string, Size: UDim2, Transparen
 		})
 	end
 
-	function Options:AddSlider(Settings: { Title: string, Description: string, MaxValue: number, AllowDecimals: boolean, DecimalAmount: number, Tab: Instance, Callback: any }) 
+	function Options:AddSlider(Settings: { Title: string, Description: string, MaxValue: number, AllowDecimals: boolean, DecimalAmount: number, Flag: string?, Default: number?, Tab: Instance, Callback: any }) 
 		local Slider = Clone(Components["Slider"]);
 		local Title, Description = Options:GetLabels(Slider);
 
@@ -746,8 +871,15 @@ function Library:CreateWindow(Settings: { Title: string, Size: UDim2, Transparen
 			
 			Value = SetNumber(Number or (Scale * Settings.MaxValue))
 			Amount.Text = Value
-			Fill.Size = UDim2.fromScale((Number and Number / Settings.MaxValue) or Scale, 1)
+			Fill.Size = UDim2.fromScale((Value / Settings.MaxValue), 1)
 			Settings.Callback(Value)
+			
+			if Settings.Flag then
+				if not Options.Flags[Settings.Flag] then
+					Options.Flags[Settings.Flag] = {}
+				end
+				Options.Flags[Settings.Flag].Value = Value
+			end
 		end
 
 		local Activate = function()
@@ -769,7 +901,16 @@ function Library:CreateWindow(Settings: { Title: string, Size: UDim2, Transparen
 			end
 		end)
 
-		Fill.Size = UDim2.fromScale(Value, 1);
+		Fill.Size = UDim2.fromScale(Value / Settings.MaxValue, 1);
+		
+		if Settings.Default then
+			Update(Settings.Default)
+		end
+		
+		if Settings.Flag then
+			Options.Flags[Settings.Flag] = { Value = Settings.Default or 0, Set = Update }
+		end
+		
 		Animations:Component(Slider);
 		SetProperty(Title, { Text = Settings.Title });
 		SetProperty(Description, { Text = Settings.Description });
@@ -993,7 +1134,126 @@ function Library:CreateWindow(Settings: { Title: string, Size: UDim2, Transparen
 		end
 	end
 
+	function Options:SaveConfig()
+		if not isfolder(Options.Folder) then
+			makefolder(Options.Folder)
+		end
+		
+		local data = {}
+		for flag, flagData in pairs(Options.Flags) do
+			data[flag] = flagData.Value
+		end
+		
+		local path = Options.Folder .. "/" .. Options.FileName
+		local success, encoded = pcall(Services.Http.JSONEncode, Services.Http, data)
+		if success then
+			writefile(path, encoded)
+		end
+	end
+
+	function Options:LoadConfig()
+		local path = Options.Folder .. "/" .. Options.FileName
+		if isfile(path) then
+			local success, decoded = pcall(function()
+				return Services.Http:JSONDecode(readfile(path))
+			end)
+			if success and decoded then
+				for flag, value in pairs(decoded) do
+					if Options.Flags[flag] and Options.Flags[flag].Set then
+						pcall(Options.Flags[flag].Set, value)
+					end
+				end
+			end
+		end
+	end
+
 	SetProperty(Window, { Size = Settings.Size, Visible = true, Parent = Screen });
+	function Options:CreateToggleButton()
+		local hiddenUI = gethui and gethui() or game:GetService("CoreGui")
+		local existingGui = hiddenUI:FindFirstChild("nvkob1ToggleButton")
+		if existingGui then 
+			existingGui:Destroy() 
+		end
+
+		local ToggleGui = Instance.new("ScreenGui")
+		ToggleGui.Name = "nvkob1ToggleButton"
+		ToggleGui.ResetOnSpawn = false
+		ToggleGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+		ToggleGui.DisplayOrder = 999999
+		ToggleGui.Parent = hiddenUI
+
+		local ToggleButton = Instance.new("ImageButton")
+		ToggleButton.Size = UDim2.new(0, 65, 0, 65) 
+		ToggleButton.Position = UDim2.new(0.05, 0, 0.05, 0)
+		ToggleButton.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+		ToggleButton.AutoButtonColor = false
+		ToggleButton.ScaleType = Enum.ScaleType.Fit
+		ToggleButton.Parent = ToggleGui
+
+		local UICorner = Instance.new("UICorner")
+		UICorner.CornerRadius = UDim.new(0.5, 0)
+		UICorner.Parent = ToggleButton
+
+		task.spawn(function()
+			local success, response = pcall(function()
+				return request({
+					Url = "https://scriptblox.com/images/photo/62a46c5b3203c751aec2e7fe-1694938703252.png",
+					Method = "GET"
+				})
+			end)
+			
+			if success and response and response.StatusCode == 200 then
+				writefile("nvkob1.png", response.Body)
+				ToggleButton.Image = getcustomasset("nvkob1.png")
+			end
+		end)
+
+		local dragging = false
+		local dragInput, dragStart, startPos
+		local hasDragged = false
+
+		local function update(input)
+			local delta = input.Position - dragStart
+			if delta.Magnitude > 5 then
+				hasDragged = true
+			end
+			ToggleButton.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+		end
+
+		ToggleButton.InputBegan:Connect(function(input)
+			if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+				dragging = true
+				hasDragged = false
+				dragStart = input.Position
+				startPos = ToggleButton.Position
+				
+				input.Changed:Connect(function()
+					if input.UserInputState == Enum.UserInputState.End then
+						dragging = false
+					end
+				end)
+			end
+		end)
+
+		ToggleButton.InputChanged:Connect(function(input)
+			if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+				dragInput = input
+			end
+		end)
+
+		Services.Input.InputChanged:Connect(function(input)
+			if input == dragInput and dragging then
+				update(input)
+			end
+		end)
+
+		ToggleButton.Activated:Connect(function()
+			if not hasDragged then
+				Close()
+			end
+		end)
+	end
+
 	Animations:Open(Window, Settings.Transparency or 0)
 
 	return Options
