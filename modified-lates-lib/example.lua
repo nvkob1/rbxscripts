@@ -338,6 +338,7 @@ Window:AddKeybind({
 	Title = "Minimize Keybind",
 	Description = "Set the keybind for Minimizing",
 	Tab = Settings,
+	Default = Enum.KeyCode.RightControl,
 	Callback = function(Key) 
 		Window:SetSetting("Keybind", Key)
 	end,
@@ -352,7 +353,7 @@ Window:AddDropdown({
 		["Dark Mode"] = "Dark",
 		["Extra Dark"] = "Void",
 	},
-	Default = "Dark",
+	Default = "Dark Mode",
 	Flag = "Theme",
 	Callback = function(Theme) 
 		Window:SetTheme(Themes[Theme])
