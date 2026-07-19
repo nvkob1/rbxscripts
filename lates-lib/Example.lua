@@ -10,13 +10,25 @@ local GuiService = game:GetService("GuiService")
 local VirtualUser = game:GetService("VirtualUser")
 local HttpService = game:GetService("HttpService")
 
+--// Device
+local Device;
+function checkDevice()
+if LocalPlayer then
+if UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled then
+    Device = UDim2.fromOffset(470, 270)
+else
+    Device = UDim2.fromOffset(570, 370)
+end
+end
+end
+checkDevice()
+
 --// Library
 local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/nvkob1/rbxscripts/refs/heads/main/lates-lib/Main.lua"))()
 local Window = Library:CreateWindow({
 	Title = "???",
 	Theme = "Dark",
-	
-	Size = UDim2.fromOffset(570, 370),
+	Size = Device,
 	Transparency = 0.2,
 	Blurring = true,
 	MinimizeKeybind = Enum.KeyCode.RightControl,
