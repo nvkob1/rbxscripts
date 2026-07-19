@@ -51,6 +51,7 @@ local Services = {
 	Tween = GetService(game, "TweenService");
 	Run = GetService(game, "RunService");
 	Input = GetService(game, "UserInputService");
+	Http = GetService(game, "HttpService");
 }
 
 local Player = {
@@ -290,7 +291,7 @@ end
 
 --// Library [Window]
 
-function Library:CreateWindow(Settings: { Title: string, Size: UDim2, Transparency: number, MinimizeKeybind: Enum.KeyCode?, Blurring: boolean, Theme: string })
+function Library:CreateWindow(Settings: { Title: string, Size: UDim2, Transparency: number, MinimizeKeybind: Enum.KeyCode?, Blurring: boolean, Theme: string, Folder: string?, FileName: string? })
 	local Window = Clone(Screen:WaitForChild("Main"));
 	local Sidebar = Window:FindFirstChild("Sidebar");
 	local Holder = Window:FindFirstChild("Main");
@@ -322,7 +323,11 @@ function Library:CreateWindow(Settings: { Title: string, Size: UDim2, Transparen
 		Tab.ScrollBarThickness = 0
 	end
 
-	local Options = {};
+	local Options = {
+		Flags = {},
+		Folder = Settings.Folder or "LatesLibrary",
+		FileName = Settings.FileName or "config.json"
+	};
 	local Examples = {};
 	local Opened = true;
 	local Maximized = false;
@@ -560,18 +565,37 @@ function Library:CreateWindow(Settings: { Title: string, Size: UDim2, Transparen
 		})
 	end
 
-	function Options:AddInput(Settings: { Title: string, Description: string, Tab: Instance, Callback: any }) 
+	function Options:AddInput(Settings: { Title: string, Description: string, Default: string?, Flag: string?, Tab: Instance, Callback: any }) 
 		local Input = Clone(Components["Input"]);
 		local Title, Description = Options:GetLabels(Input);
 		local TextBox = Input["Main"]["Input"];
+
+		local Set = function(Value)
+			TextBox.Text = Value
+			Settings.Callback(Value)
+			if Settings.Flag then
+				if not Options.Flags[Settings.Flag] then
+					Options.Flags[Settings.Flag] = {}
+				end
+				Options.Flags[Settings.Flag].Value = Value
+			end
+		end
 
 		Connect(Input.MouseButton1Click, function() 
 			TextBox:CaptureFocus()
 		end)
 
 		Connect(TextBox.FocusLost, function() 
-			Settings.Callback(TextBox.Text)
+			Set(TextBox.Text)
 		end)
+		
+		if Settings.Default then
+			Set(Settings.Default)
+		end
+		
+		if Settings.Flag then
+			Options.Flags[Settings.Flag] = { Value = Settings.Default or "", Set = Set }
+		end
 
 		Animations:Component(Input)
 		SetProperty(Title, { Text = Settings.Title });
@@ -583,7 +607,7 @@ function Library:CreateWindow(Settings: { Title: string, Size: UDim2, Transparen
 		})
 	end
 
-	function Options:AddToggle(Settings: { Title: string, Description: string, Default: boolean, Tab: Instance, Callback: any }) 
+	function Options:AddToggle(Settings: { Title: string, Description: string, Default: boolean, Flag: string?, Tab: Instance, Callback: any }) 
 		local Toggle = Clone(Components["Toggle"]);
 		local Title, Description = Options:GetLabels(Toggle);
 
@@ -601,7 +625,24 @@ function Library:CreateWindow(Settings: { Title: string, Size: UDim2, Transparen
 			end
 			
 			On.Value = Value
+			
+			if Settings.Flag then
+				if not Options.Flags[Settings.Flag] then
+					Options.Flags[Settings.Flag] = {}
+				end
+				Options.Flags[Settings.Flag].Value = Value
+			end
 		end 
+		
+		if Settings.Flag then
+			Options.Flags[Settings.Flag] = { 
+				Value = Settings.Default, 
+				Set = function(val) 
+					Set(val) 
+					Settings.Callback(val) 
+				end 
+			}
+		end
 
 		Connect(Toggle.MouseButton1Click, function()
 			local Value = not On.Value
@@ -621,7 +662,7 @@ function Library:CreateWindow(Settings: { Title: string, Size: UDim2, Transparen
 		})
 	end
 	
-	function Options:AddKeybind(Settings: { Title: string, Description: string, Tab: Instance, Callback: any }) 
+	function Options:AddKeybind(Settings: { Title: string, Description: string, Default: any, Flag: string?, Tab: Instance, Callback: any }) 
 		local Dropdown = Clone(Components["Keybind"]);
 		local Title, Description = Options:GetLabels(Dropdown);
 		local Bind = Dropdown["Main"].Options;
@@ -632,6 +673,25 @@ function Library:CreateWindow(Settings: { Title: string, Size: UDim2, Transparen
 			["Key"] = "Enum.KeyCode." 
 		}
 		
+		local Set = function(Key)
+			local Type = typeof(Key) == "EnumItem" and Key or (Key.UserInputType == Enum.UserInputType.Keyboard and Key.KeyCode or Key.UserInputType)
+			local Str = tostring(Type)
+			
+			if Str:find("UserInputType") then
+				SetProperty(Bind, { Text = Str:gsub(Types.Mouse, "MB") })
+			else
+				SetProperty(Bind, { Text = Str:gsub(Types.Key, "") })
+			end
+			Settings.Callback(Key)
+			
+			if Settings.Flag then
+				if not Options.Flags[Settings.Flag] then
+					Options.Flags[Settings.Flag] = {}
+				end
+				Options.Flags[Settings.Flag].Value = Type.Name
+			end
+		end
+
 		Connect(Dropdown.MouseButton1Click, function()
 			local Time = tick();
 			local Detect, Finished
@@ -643,20 +703,30 @@ function Library:CreateWindow(Settings: { Title: string, Size: UDim2, Transparen
 				if not Finished and not Focused then
 					Finished = (true)
 					
-					if table.find(Mouse, InputType) then
-						Settings.Callback(Key);
-						SetProperty(Bind, {
-							Text = tostring(InputType):gsub(Types.Mouse, "MB")
-						})
-					elseif InputType == Enum.UserInputType.Keyboard then
-						Settings.Callback(Key);
-						SetProperty(Bind, {
-							Text = tostring(Key.KeyCode):gsub(Types.Key, "")
-						})
+					if table.find(Mouse, InputType) or InputType == Enum.UserInputType.Keyboard then
+						Set(Key)
 					end
 				end 
 			end)
 		end)
+		
+		if Settings.Default then
+			Set(Settings.Default)
+		end
+		
+		if Settings.Flag then
+			Options.Flags[Settings.Flag] = { 
+				Value = Settings.Default and Settings.Default.Name or "", 
+				Set = function(val)
+					pcall(function()
+						local foundEnum = Enum.KeyCode[val] or Enum.UserInputType[val]
+						if foundEnum then
+							Set(foundEnum)
+						end
+					end)
+				end
+			}
+		end
 
 		Animations:Component(Dropdown);
 		SetProperty(Title, { Text = Settings.Title });
@@ -668,10 +738,37 @@ function Library:CreateWindow(Settings: { Title: string, Size: UDim2, Transparen
 		})
 	end
 
-	function Options:AddDropdown(Settings: { Title: string, Description: string, Options: {}, Tab: Instance, Callback: any }) 
+	function Options:AddDropdown(Settings: { Title: string, Description: string, Options: {}, Flag: string?, Default: any, Tab: Instance, Callback: any }) 
 		local Dropdown = Clone(Components["Dropdown"]);
 		local Title, Description = Options:GetLabels(Dropdown);
 		local Text = Dropdown["Main"].Options;
+		
+		local Set = function(Value)
+			local textIndex = tostring(Value)
+			for k, v in pairs(Settings.Options) do
+				if v == Value or k == Value then
+					textIndex = k
+					break
+				end
+			end
+			Text.Text = textIndex
+			Settings.Callback(Value)
+			
+			if Settings.Flag then
+				if not Options.Flags[Settings.Flag] then
+					Options.Flags[Settings.Flag] = {}
+				end
+				Options.Flags[Settings.Flag].Value = Value
+			end
+		end
+
+		if Settings.Default then
+			Set(Settings.Default)
+		end
+		
+		if Settings.Flag then
+			Options.Flags[Settings.Flag] = { Value = Settings.Default, Set = Set }
+		end
 
 		Connect(Dropdown.MouseButton1Click, function()
 			local Example = Clone(Examples["DropdownExample"]);
@@ -709,8 +806,7 @@ function Library:CreateWindow(Settings: { Title: string, Size: UDim2, Transparen
 
 					if NewValue then
 						Tween(Button, .25, { BackgroundColor3 = Theme.Interactables });
-						Settings.Callback(Option)
-						Text.Text = Index
+						Set(Option)
 
 						for _, Others in next, Example:GetChildren() do
 							if Others:IsA("TextButton") and Others ~= Button then
@@ -740,7 +836,7 @@ function Library:CreateWindow(Settings: { Title: string, Size: UDim2, Transparen
 		})
 	end
 
-	function Options:AddSlider(Settings: { Title: string, Description: string, MaxValue: number, AllowDecimals: boolean, DecimalAmount: number, Tab: Instance, Callback: any }) 
+	function Options:AddSlider(Settings: { Title: string, Description: string, MaxValue: number, AllowDecimals: boolean, DecimalAmount: number, Flag: string?, Default: number?, Tab: Instance, Callback: any }) 
 		local Slider = Clone(Components["Slider"]);
 		local Title, Description = Options:GetLabels(Slider);
 
@@ -775,8 +871,15 @@ function Library:CreateWindow(Settings: { Title: string, Size: UDim2, Transparen
 			
 			Value = SetNumber(Number or (Scale * Settings.MaxValue))
 			Amount.Text = Value
-			Fill.Size = UDim2.fromScale((Number and Number / Settings.MaxValue) or Scale, 1)
+			Fill.Size = UDim2.fromScale((Value / Settings.MaxValue), 1)
 			Settings.Callback(Value)
+			
+			if Settings.Flag then
+				if not Options.Flags[Settings.Flag] then
+					Options.Flags[Settings.Flag] = {}
+				end
+				Options.Flags[Settings.Flag].Value = Value
+			end
 		end
 
 		local Activate = function()
@@ -798,7 +901,16 @@ function Library:CreateWindow(Settings: { Title: string, Size: UDim2, Transparen
 			end
 		end)
 
-		Fill.Size = UDim2.fromScale(Value, 1);
+		Fill.Size = UDim2.fromScale(Value / Settings.MaxValue, 1);
+		
+		if Settings.Default then
+			Update(Settings.Default)
+		end
+		
+		if Settings.Flag then
+			Options.Flags[Settings.Flag] = { Value = Settings.Default or 0, Set = Update }
+		end
+		
 		Animations:Component(Slider);
 		SetProperty(Title, { Text = Settings.Title });
 		SetProperty(Description, { Text = Settings.Description });
@@ -1019,6 +1131,39 @@ function Library:CreateWindow(Settings: { Title: string, Size: UDim2, Transparen
 			
 		else
 			warn("Tried to change a setting that doesn't exist or isn't available to change.")
+		end
+	end
+
+	function Options:SaveConfig()
+		if not isfolder(Options.Folder) then
+			makefolder(Options.Folder)
+		end
+		
+		local data = {}
+		for flag, flagData in pairs(Options.Flags) do
+			data[flag] = flagData.Value
+		end
+		
+		local path = Options.Folder .. "/" .. Options.FileName
+		local success, encoded = pcall(Services.Http.JSONEncode, Services.Http, data)
+		if success then
+			writefile(path, encoded)
+		end
+	end
+
+	function Options:LoadConfig()
+		local path = Options.Folder .. "/" .. Options.FileName
+		if isfile(path) then
+			local success, decoded = pcall(function()
+				return Services.Http:JSONDecode(readfile(path))
+			end)
+			if success and decoded then
+				for flag, value in pairs(decoded) do
+					if Options.Flags[flag] and Options.Flags[flag].Set then
+						pcall(Options.Flags[flag].Set, value)
+					end
+				end
+			end
 		end
 	end
 
