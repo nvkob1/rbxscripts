@@ -24,7 +24,7 @@ end
 checkDevice()
 
 --// Library
-local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/nvkob1/rbxscripts/refs/heads/main/lates-lib/Main.lua"))()
+local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/nvkob1/rbxscripts/refs/heads/main/modified-lates-lib/lates-lib-source.lua"))()
 local Window = Library:CreateWindow({
 	Title = "???",
 	Theme = "Dark",
