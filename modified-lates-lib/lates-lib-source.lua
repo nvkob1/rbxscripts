@@ -326,7 +326,8 @@ function Library:CreateWindow(Settings: { Title: string, Size: UDim2, Transparen
 	local Options = {
 		Flags = {},
 		Folder = Settings.Folder or "LatesLibrary",
-		FileName = Settings.FileName or "config.json"
+		FileName = Settings.FileName or "config.json",
+		DropdownSearch = Settings.DropdownSearch
 	};
 	local Examples = {};
 	local Opened = true;
@@ -739,7 +740,7 @@ function Library:CreateWindow(Settings: { Title: string, Size: UDim2, Transparen
 		})
 	end
 
-	function Options:AddDropdown(Settings: { Title: string, Description: string, Options: {}, Flag: string?, Default: any, Tab: Instance, Callback: any }) 
+	function Options:AddDropdown(Settings: { Title: string, Description: string, Options: {}, Flag: string?, Search: boolean?, Default: any, Tab: Instance, Callback: any }) 
 		local Dropdown = Clone(Components["Dropdown"]);
 		local Title, Description = Options:GetLabels(Dropdown);
 		local Text = Dropdown["Main"].Options;
@@ -818,6 +819,46 @@ function Library:CreateWindow(Settings: { Title: string, Size: UDim2, Transparen
 				end
 			end
 
+			local optionButtons = {}
+			local shouldSearch = (Settings.Search ~= nil) and Settings.Search or Options.DropdownSearch
+			
+			if shouldSearch then
+				local SearchContainer = Instance.new("Frame")
+				SearchContainer.Name = "SearchContainer"
+				SearchContainer.Size = UDim2.new(1, 0, 0, 36)
+				SearchContainer.BackgroundTransparency = 1
+				SearchContainer.Parent = Example.ScrollingFrame
+				SearchContainer.LayoutOrder = -1
+				
+				local SearchBox = Instance.new("TextBox")
+				SearchBox.Name = "SearchBox"
+				SearchBox.Size = UDim2.new(1, -16, 1, -8)
+				SearchBox.Position = UDim2.new(0, 8, 0, 4)
+				SearchBox.BackgroundColor3 = Theme.Component
+				SearchBox.TextColor3 = Theme.Title
+				SearchBox.PlaceholderText = "Search options..."
+				SearchBox.PlaceholderColor3 = Theme.Description
+				SearchBox.Text = ""
+				SearchBox.Font = Enum.Font.Gotham
+				SearchBox.TextSize = 13
+				SearchBox.Parent = SearchContainer
+				
+				local UICorner = Instance.new("UICorner")
+				UICorner.CornerRadius = UDim.new(0, 4)
+				UICorner.Parent = SearchBox
+
+				Connect(SearchBox:GetPropertyChangedSignal("Text"), function()
+					local query = SearchBox.Text:lower()
+					for index, btn in pairs(optionButtons) do
+						if query == "" or string.find(index:lower(), query, 1, true) then
+							btn.Visible = true
+						else
+							btn.Visible = false
+						end
+					end
+				end)
+			end
+
 			for Index, Option in next, Settings.Options do
 				local Button = Clone(Examples["DropdownButtonExample"]);
 				local Title, Description = Options:GetLabels(Button);
@@ -827,6 +868,8 @@ function Library:CreateWindow(Settings: { Title: string, Size: UDim2, Transparen
 				SetProperty(Title, { Text = Index });
 				SetProperty(Button, { Parent = Example.ScrollingFrame, Visible = true });
 				Destroy(Description);
+				
+				optionButtons[Index] = Button
 
 				Connect(Button.MouseButton1Click, function() 
 					local NewValue = not Selected.Value 
