@@ -332,6 +332,7 @@ function Library:CreateWindow(Settings: { Title: string, Size: UDim2, Transparen
 	local Opened = true;
 	local Maximized = false;
 	local BlurEnabled = false
+	local DropdownOpen = false
 
 	for Index, Descendant in next, Window:GetDescendants() do
 		if Descendant.Name:find("Example") and not Examples[Descendant.Name] then
@@ -771,22 +772,48 @@ function Library:CreateWindow(Settings: { Title: string, Size: UDim2, Transparen
 		end
 
 		Connect(Dropdown.MouseButton1Click, function()
+			if DropdownOpen then return end
+			DropdownOpen = true
+			
 			local Example = Clone(Examples["DropdownExample"]);
 			local Buttons = Example["Top"]["Buttons"];
 
 			Tween(BG, .25, { BackgroundTransparency = 0.6 });
 			SetProperty(Example, { Parent = Window });
 			Animations:Open(Example, 0, true)
+			
+			local bgConnection
+			local function closeDropdown()
+				if bgConnection then
+					bgConnection:Disconnect()
+					bgConnection = nil
+				end
+				if not DropdownOpen then return end
+				DropdownOpen = false
+				Tween(BG, .25, { BackgroundTransparency = 1 });
+				Animations:Close(Example);
+				task.wait(2)
+				Destroy(Example);
+			end
+
+			bgConnection = Connect(Services.Input.InputBegan, function(input)
+				if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+					local x, y = Player.Mouse.X, Player.Mouse.Y
+					local exX, exY = Example.AbsolutePosition.X, Example.AbsolutePosition.Y
+					local exSize = Example.AbsoluteSize
+					
+					if x < exX or x > exX + exSize.X or y < exY or y > exY + exSize.Y then
+						closeDropdown()
+					end
+				end
+			end)
 
 			for Index, Button in next, Buttons:GetChildren() do
 				if Button:IsA("TextButton") then
 					Animations:Component(Button, true)
 
 					Connect(Button.MouseButton1Click, function()
-						Tween(BG, .25, { BackgroundTransparency = 1 });
-						Animations:Close(Example);
-						task.wait(2)
-						Destroy(Example);
+						closeDropdown()
 					end)
 				end
 			end
@@ -818,10 +845,7 @@ function Library:CreateWindow(Settings: { Title: string, Size: UDim2, Transparen
 					end
 
 					Selected.Value = NewValue
-					Tween(BG, .25, { BackgroundTransparency = 1 });
-					Animations:Close(Example);
-					task.wait(2)
-					Destroy(Example);
+					closeDropdown()
 				end)
 			end
 		end)
