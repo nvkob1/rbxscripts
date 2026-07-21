@@ -291,7 +291,7 @@ end
 
 --// Library [Window]
 
-function Library:CreateWindow(Settings: { Title: string, Size: UDim2, Transparency: number, MinimizeKeybind: Enum.KeyCode?, Blurring: boolean, Theme: string, Folder: string?, FileName: string? })
+function Library:CreateWindow(Settings: { Title: string, Size: UDim2, Transparency: number, MinimizeKeybind: Enum.KeyCode?, Blurring: boolean, Theme: string, Folder: string?, FileName: string?, ForceCursorShow: boolean? })
 	local Window = Clone(Screen:WaitForChild("Main"));
 	local Sidebar = Window:FindFirstChild("Sidebar");
 	local Holder = Window:FindFirstChild("Main");
@@ -325,10 +325,23 @@ function Library:CreateWindow(Settings: { Title: string, Size: UDim2, Transparen
 
 	local Options = {
 		Flags = {},
-		Folder = Settings.Folder or "LatesLibrary",
+		Folder = Settings.Folder or "lates-lib",
 		FileName = Settings.FileName or "config.json",
-		DropdownSearch = Settings.DropdownSearch
+		DropdownSearch = Settings.DropdownSearch,
+		AutoSave = false
 	};
+	
+	local saveThread = nil
+	function Options:QueueSave()
+		if not Options.AutoSave then return end
+		if saveThread then
+			task.cancel(saveThread)
+		end
+		saveThread = task.delay(0.5, function()
+			Options:SaveConfig()
+		end)
+	end
+
 	local Examples = {};
 	local Opened = true;
 	local Maximized = false;
@@ -359,6 +372,49 @@ function Library:CreateWindow(Settings: { Title: string, Size: UDim2, Transparen
 
 	if Settings.MinimizeKeybind then
 		Setup.Keybind = Settings.MinimizeKeybind
+	end
+
+	if Settings.ForceCursorShow then
+		local UIS = GetService(game, "UserInputService")
+		local RS = GetService(game, "RunService")
+		local GS = GetService(game, "GuiService")
+		
+		Connect(RS.RenderStepped, function()
+			local mpos = UIS:GetMouseLocation()
+			local inset = GS:GetGuiInset()
+			local isHovering = false
+
+			local function checkHover(guiObj)
+				if not guiObj or not guiObj.Visible or not guiObj.Parent then return false end
+				local screenGui = guiObj:FindFirstAncestorOfClass("ScreenGui")
+				local pos = guiObj.AbsolutePosition
+				local size = guiObj.AbsoluteSize
+				
+				-- GetMouseLocation() includes the top bar (GuiInset). 
+				-- If IgnoreGuiInset is false, AbsolutePosition is relative to the viewport (excludes top bar).
+				-- So we must subtract inset.Y from mpos.Y to match AbsolutePosition.
+				local my = mpos.Y
+				if screenGui and not screenGui.IgnoreGuiInset then
+					my = my - inset.Y
+				end
+				
+				return mpos.X >= pos.X and mpos.X <= pos.X + size.X and my >= pos.Y and my <= pos.Y + size.Y
+			end
+
+			if Opened and checkHover(Window) then
+				isHovering = true
+			end
+
+			if not isHovering and checkHover(Options.ToggleButton) then
+				isHovering = true
+			end
+			
+			if isHovering then
+				UIS.MouseIconEnabled = true
+			else
+				UIS.MouseIconEnabled = false 
+			end
+		end)
 	end
 
 	--// Animate
@@ -580,6 +636,7 @@ function Library:CreateWindow(Settings: { Title: string, Size: UDim2, Transparen
 					Options.Flags[Settings.Flag] = {}
 				end
 				Options.Flags[Settings.Flag].Value = Value
+				Options:QueueSave()
 			end
 		end
 
@@ -633,6 +690,7 @@ function Library:CreateWindow(Settings: { Title: string, Size: UDim2, Transparen
 					Options.Flags[Settings.Flag] = {}
 				end
 				Options.Flags[Settings.Flag].Value = Value
+				Options:QueueSave()
 			end
 		end 
 		
@@ -655,6 +713,10 @@ function Library:CreateWindow(Settings: { Title: string, Size: UDim2, Transparen
 
 		Animations:Component(Toggle);
 		Set(Settings.Default);
+		if Settings.Callback then
+			Settings.Callback(Settings.Default)
+		end
+		
 		SetProperty(Title, { Text = Settings.Title });
 		SetProperty(Description, { Text = Settings.Description });
 		SetProperty(Toggle, {
@@ -691,6 +753,7 @@ function Library:CreateWindow(Settings: { Title: string, Size: UDim2, Transparen
 					Options.Flags[Settings.Flag] = {}
 				end
 				Options.Flags[Settings.Flag].Value = Type.Name
+				Options:QueueSave()
 			end
 		end
 
@@ -761,6 +824,7 @@ function Library:CreateWindow(Settings: { Title: string, Size: UDim2, Transparen
 					Options.Flags[Settings.Flag] = {}
 				end
 				Options.Flags[Settings.Flag].Value = Value
+				Options:QueueSave()
 			end
 		end
 
@@ -946,6 +1010,7 @@ function Library:CreateWindow(Settings: { Title: string, Size: UDim2, Transparen
 					Options.Flags[Settings.Flag] = {}
 				end
 				Options.Flags[Settings.Flag].Value = Value
+				Options:QueueSave()
 			end
 		end
 
@@ -1234,6 +1299,214 @@ function Library:CreateWindow(Settings: { Title: string, Size: UDim2, Transparen
 		end
 	end
 
+	function Options:BuildSettingsSection(Tab, Themes)
+		local Players = game:GetService("Players")
+		local LocalPlayer = Players.LocalPlayer
+		local TeleportService = game:GetService("TeleportService")
+		local HttpService = game:GetService("HttpService")
+		local VirtualUser = game:GetService("VirtualUser")
+		local GuiService = game:GetService("GuiService")
+
+		Options:AddSection({ Name = "Server", Tab = Tab }) 
+
+		local function rejoin()
+			if #Players:GetPlayers() <= 1 then
+				LocalPlayer:Kick("\nRejoining...")
+				task.wait()
+				TeleportService:Teleport(game.PlaceId, LocalPlayer)
+			else
+				TeleportService:TeleportToPlaceInstance(game.PlaceId, game.JobId, LocalPlayer)
+			end
+		end
+
+		local function ServerHop()
+			local placeId = game.PlaceId
+			local success, servers = pcall(function()
+				return HttpService:JSONDecode(
+					game:HttpGet("https://games.roblox.com/v1/games/" .. placeId .. "/servers/Public?sortOrder=Asc&limit=100")
+				).data
+			end)
+
+			if success and servers then
+				local validServers = {}
+				for _, server in ipairs(servers) do
+					if server.playing < server.maxPlayers and server.id ~= game.JobId then
+						table.insert(validServers, server)
+					end
+				end
+
+				if #validServers > 0 then
+					local chosenServer = validServers[math.random(1, #validServers)]
+					TeleportService:TeleportToPlaceInstance(placeId, chosenServer.id, LocalPlayer)
+				else
+					TeleportService:Teleport(placeId, LocalPlayer)
+				end
+			else
+				TeleportService:Teleport(placeId, LocalPlayer)
+			end
+		end
+
+		local antiAfkConnection
+		local function EnableAntiAfk()
+			antiAfkConnection = LocalPlayer.Idled:Connect(function()
+				VirtualUser:CaptureController()
+				VirtualUser:ClickButton2(Vector2.new())
+			end)
+		end
+		local function DisableAntiAfk()
+			if antiAfkConnection then
+				antiAfkConnection:Disconnect()
+				antiAfkConnection = nil
+			end
+		end
+
+		local autoRejoinConnection
+		local function EnableAutoRejoin()
+			autoRejoinConnection = GuiService.ErrorMessageChanged:Connect(function()
+				rejoin()
+			end)
+		end
+		local function DisableAutoRejoin()
+			if autoRejoinConnection then
+				autoRejoinConnection:Disconnect()
+				autoRejoinConnection = nil
+			end
+		end
+
+		Options:AddToggle({
+			Title = "Anti-Afk",
+			Description = "No more AFK kick.",
+			Default = true,
+			Flag = "AntiAfk",
+			Tab = Tab,
+			Callback = function(Boolean) 
+				if Boolean then
+					EnableAntiAfk()
+				else
+					DisableAntiAfk()
+				end
+			end,
+		}) 
+
+		Options:AddToggle({
+			Title = "Auto Rejoin",
+			Description = "Automatic Rejoin When Disconnected.",
+			Default = true,
+			Flag = "AutoRejoin",
+			Tab = Tab,
+			Callback = function(Boolean) 
+				if Boolean then
+					EnableAutoRejoin()
+				else
+					DisableAutoRejoin()
+				end
+			end,
+		}) 
+
+		Options:AddButton({
+			Title = "Rejoin",
+			Description = "Rejoin current server.",
+			Tab = Tab,
+			Callback = function() 
+				rejoin()
+			end,
+		})
+		Options:AddButton({
+			Title = "Server Hop",
+			Description = "Join another server.",
+			Tab = Tab,
+			Callback = function() 
+				ServerHop()
+			end,
+		})
+		Options:AddButton({
+			Title = "Infinite Yield",
+			Description = "Admin commands script.",
+			Tab = Tab,
+			Callback = function() 
+				loadstring(game:HttpGet("https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source"))()
+			end,
+		}) 
+
+		Options:AddSection({ Name = "UI", Tab = Tab }) 
+
+		Options:AddKeybind({
+			Title = "Minimize Keybind",
+			Description = "Set the keybind for Minimizing",
+			Tab = Tab,
+			Default = Settings.MinimizeKeybind or Enum.KeyCode.RightControl,
+			Flag = "MinimizeKeybind",
+			Callback = function(Key) 
+				Options:SetSetting("Keybind", Key)
+			end,
+		}) 
+
+		if Themes then
+			Options:AddDropdown({
+				Title = "Set Theme",
+				Description = "Set the theme of the library!",
+				Tab = Tab,
+				Options = {
+					["Light Mode"] = "Light",
+					["Dark Mode"] = "Dark",
+					["Extra Dark"] = "Void",
+				},
+				Default = "Dark Mode",
+				Flag = "Theme",
+				Callback = function(ThemeStr) 
+					Options:SetTheme(Themes[ThemeStr])
+				end,
+			}) 
+		end
+
+		Options:AddToggle({
+			Title = "UI Blur",
+			Description = "If enabled, must have your Roblox graphics set to 8+ for it to work",
+			Default = false,
+			Flag = "Blur",
+			Tab = Tab,
+			Callback = function(Boolean) 
+				Options:SetSetting("Blur", Boolean)
+			end,
+		}) 
+
+		Options:AddSlider({
+			Title = "UI Transparency",
+			Description = "Set the transparency of the UI",
+			Tab = Tab,
+			AllowDecimals = true,
+			MaxValue = 1,
+			Default = 0,
+			Flag = "Transparency",
+			Callback = function(Amount) 
+				Options:SetSetting("Transparency", Amount)
+			end,
+		})
+
+		Options:AddSection({ Name = "Config", Tab = Tab })
+
+		Options:AddToggle({
+			Title = "Auto Save",
+			Description = "Automatically saves settings.",
+			Default = getgenv().AutoSave or false,
+			Flag = "AutoSave",
+			Tab = Tab,
+			Callback = function(Boolean)
+				getgenv().AutoSave = Boolean
+				Options.AutoSave = Boolean
+			end,
+		})
+
+		Options:AddButton({
+			Title = "Save Settings",
+			Description = "Manually save current settings.",
+			Tab = Tab,
+			Callback = function()
+				Options:SaveConfig()
+			end,
+		})
+	end
+
 	SetProperty(Window, { Size = Settings.Size, Visible = true, Parent = Screen });
 	function Options:CreateToggleButton()
 		local hiddenUI = gethui and gethui() or game:GetService("CoreGui")
@@ -1256,6 +1529,7 @@ function Library:CreateWindow(Settings: { Title: string, Size: UDim2, Transparen
 		ToggleButton.AutoButtonColor = false
 		ToggleButton.ScaleType = Enum.ScaleType.Fit
 		ToggleButton.Parent = ToggleGui
+		Options.ToggleButton = ToggleButton
 
 		local UICorner = Instance.new("UICorner")
 		UICorner.CornerRadius = UDim.new(0.5, 0)
