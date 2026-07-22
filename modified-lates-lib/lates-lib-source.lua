@@ -1299,6 +1299,14 @@ function Library:CreateWindow(Settings: { Title: string, Size: UDim2, Transparen
 		end
 	end
 
+	function Options:SetFlag(flag, value)
+		if Options.Flags[flag] and Options.Flags[flag].Set then
+			Options.Flags[flag].Set(value)
+		else
+			warn("[lates-lib] SetFlag: flag '" .. tostring(flag) .. "' not found or not settable")
+		end
+	end
+
 	function Options:BuildSettingsSection(Tab, Themes)
 		local Players = game:GetService("Players")
 		local LocalPlayer = Players.LocalPlayer
