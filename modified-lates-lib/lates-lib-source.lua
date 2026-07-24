@@ -1511,6 +1511,11 @@ function Library:CreateWindow(Settings: { Title: string, Size: UDim2, Transparen
 			Tab = Tab,
 			Callback = function()
 				Options:SaveConfig()
+				Options:Notify({
+					Title = "Settings Saved",
+					Description = "Your settings have been saved successfully!",
+					Duration = 3,
+				})
 			end,
 		})
 	end
