@@ -1055,14 +1055,22 @@ function Library:CreateWindow(Settings: { Title: string, Size: UDim2, Transparen
 
 	function Options:AddParagraph(Settings: { Title: string, Description: string, Tab: Instance }) 
 		local Paragraph = Clone(Components["Paragraph"]);
-		local Title, Description = Options:GetLabels(Paragraph);
+		local TitleLabel, DescLabel = Options:GetLabels(Paragraph);
 
-		SetProperty(Title, { Text = Settings.Title });
-		SetProperty(Description, { Text = Settings.Description });
+		SetProperty(TitleLabel, { Text = Settings.Title });
+		SetProperty(DescLabel, { Text = Settings.Description });
 		SetProperty(Paragraph, {
 			Parent = Settings.Tab,
 			Visible = true,
 		})
+
+		local ParagraphObj = {}
+		function ParagraphObj:Set(NewTitle, NewDesc)
+			if NewTitle ~= nil then TitleLabel.Text = NewTitle end
+			if NewDesc ~= nil then DescLabel.Text = NewDesc end
+		end
+
+		return ParagraphObj
 	end
 
 	local Themes = {
