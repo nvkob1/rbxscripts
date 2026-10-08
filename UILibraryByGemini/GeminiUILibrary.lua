@@ -610,9 +610,25 @@ function Gemini:CreateWindow(options)
         function Tab:CreateDropdown(options)
             options = options or {}
             local dropName = options.Name or "Dropdown"
-            local dropOptions = options.Options or {}
+            local dropOptionsRaw = options.Options
+            local dropOptionsFunc = (type(dropOptionsRaw) == "function" and dropOptionsRaw)
+                or (type(options.Function) == "function" and options.Function)
+                or (type(options.GetOptions) == "function" and options.GetOptions)
+                or (type(options.RefreshFunc) == "function" and options.RefreshFunc)
+
+            local dropOptions = {}
+            if dropOptionsFunc then
+                local success, res = pcall(dropOptionsFunc)
+                if success and type(res) == "table" then
+                    dropOptions = res
+                end
+            elseif type(dropOptionsRaw) == "table" then
+                dropOptions = dropOptionsRaw
+            end
+
             local dropDefault = options.Default or ""
             local dropCallback = options.Callback or function() end
+            local autoRefresh = options.AutoRefresh
 
             local DropdownOpen = false
             local CurrentValue = dropDefault
@@ -763,6 +779,94 @@ function Gemini:CreateWindow(options)
                     pcall(dropCallback, CurrentValue)
                 end)
             end
+
+            local DropdownController = {}
+
+            function DropdownController:Refresh(newList, keepCurrent)
+                dropOptions = newList or {}
+                maxFrameSize = RefreshDropdownOptions()
+                
+                local isFound = false
+                for _, opt in ipairs(dropOptions) do
+                    if opt == CurrentValue then
+                        isFound = true
+                        break
+                    end
+                end
+
+                if keepCurrent == false or not isFound then
+                    CurrentValue = dropOptions[1] or ""
+                    SelectedLabel.Text = CurrentValue
+                end
+
+                if DropdownOpen then
+                    TweenService:Create(DropdownFrame, TweenInfo.new(0.2), {Size = UDim2.new(1, 0, 0, maxFrameSize)}):Play()
+                end
+            end
+
+            function DropdownController:Set(value)
+                CurrentValue = value
+                SelectedLabel.Text = tostring(value)
+                pcall(dropCallback, CurrentValue)
+            end
+
+            function DropdownController:Get()
+                return CurrentValue
+            end
+
+            if autoRefresh and dropOptionsFunc then
+                local function AreTablesEqual(t1, t2)
+                    if #t1 ~= #t2 then return false end
+                    for i = 1, #t1 do
+                        if t1[i] ~= t2[i] then return false end
+                    end
+                    return true
+                end
+
+                local isBusy = false
+                local function TriggerRefresh()
+                    if isBusy then return end
+                    isBusy = true
+                    task.delay(0.05, function()
+                        local success, updated = pcall(dropOptionsFunc)
+                        if success and type(updated) == "table" then
+                            if not AreTablesEqual(dropOptions, updated) then
+                                DropdownController:Refresh(updated, true)
+                            end
+                        end
+                        isBusy = false
+                    end)
+                end
+
+                -- Inventory reactive hook
+                local function ConnectInventory(character)
+                    local backpack = Players.LocalPlayer:FindFirstChild("Backpack") or Players.LocalPlayer:WaitForChild("Backpack", 3)
+                    if backpack then
+                        backpack.ChildAdded:Connect(function(c) if c:IsA("Tool") then TriggerRefresh() end end)
+                        backpack.ChildRemoved:Connect(function(c) if c:IsA("Tool") then TriggerRefresh() end end)
+                    end
+                    if character then
+                        character.ChildAdded:Connect(function(c) if c:IsA("Tool") then TriggerRefresh() end end)
+                        character.ChildRemoved:Connect(function(c) if c:IsA("Tool") then TriggerRefresh() end end)
+                    end
+                end
+
+                if Players.LocalPlayer.Character then
+                    ConnectInventory(Players.LocalPlayer.Character)
+                end
+                Players.LocalPlayer.CharacterAdded:Connect(ConnectInventory)
+
+                -- Polling loop as backup or for non-inventory dynamic lists
+                local interval = (type(autoRefresh) == "number" and autoRefresh) or 1
+                task.spawn(function()
+                    while DropdownFrame and DropdownFrame.Parent do
+                        task.wait(interval)
+                        TriggerRefresh()
+                    end
+                end)
+            end
+
+            return DropdownController
         end
 
         return Tab
