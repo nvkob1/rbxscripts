@@ -722,14 +722,15 @@ function Gemini:CreateWindow(options)
                 end
 
                 for i, option in ipairs(dropOptions) do
+                    local optText = typeof(option) == "Instance" and option.Name or tostring(option)
                     local OptBtn = Instance.new("TextButton")
-                    OptBtn.Name = "OptBtn_" .. option
+                    OptBtn.Name = "OptBtn_" .. optText
                     OptBtn.Parent = OptionContainer
                     OptBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
                     OptBtn.BorderSizePixel = 0
                     OptBtn.Size = UDim2.new(1, 0, 0, 25)
                     OptBtn.Font = Enum.Font.Gotham
-                    OptBtn.Text = option
+                    OptBtn.Text = optText
                     OptBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
                     OptBtn.TextSize = 12
 
@@ -746,7 +747,7 @@ function Gemini:CreateWindow(options)
 
                     OptBtn.MouseButton1Click:Connect(function()
                         CurrentValue = option
-                        SelectedLabel.Text = option
+                        SelectedLabel.Text = optText
                         DropdownOpen = false
                         TweenService:Create(DropdownFrame, TweenInfo.new(0.2), {Size = UDim2.new(1, 0, 0, 35)}):Play()
                         Icon.Text = "+"
@@ -796,7 +797,7 @@ function Gemini:CreateWindow(options)
 
                 if keepCurrent == false or not isFound then
                     CurrentValue = dropOptions[1] or ""
-                    SelectedLabel.Text = CurrentValue
+                    SelectedLabel.Text = typeof(CurrentValue) == "Instance" and CurrentValue.Name or tostring(CurrentValue)
                 end
 
                 if DropdownOpen then
