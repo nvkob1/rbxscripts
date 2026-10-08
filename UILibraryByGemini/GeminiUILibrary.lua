@@ -673,7 +673,7 @@ function Gemini:CreateWindow(options)
             SelectedLabel.Position = UDim2.new(1, -110, 0, 0)
             SelectedLabel.Size = UDim2.new(0, 80, 1, 0)
             SelectedLabel.Font = Enum.Font.Gotham
-            SelectedLabel.Text = CurrentValue
+            SelectedLabel.Text = typeof(CurrentValue) == "Instance" and CurrentValue.Name or tostring(CurrentValue)
             SelectedLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
             SelectedLabel.TextSize = 12
             SelectedLabel.TextXAlignment = Enum.TextXAlignment.Right
@@ -807,7 +807,7 @@ function Gemini:CreateWindow(options)
 
             function DropdownController:Set(value)
                 CurrentValue = value
-                SelectedLabel.Text = tostring(value)
+                SelectedLabel.Text = typeof(value) == "Instance" and value.Name or tostring(value)
                 pcall(dropCallback, CurrentValue)
             end
 
