@@ -1,6 +1,6 @@
 -- local GeminiUI = loadfile("GeminiUILibrary.lua")() 
 -- If you hosted it online, use:
-local GeminiUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/nvkob1/rbxscripts/refs/heads/main/GeminiUILibrary.lua"))()
+local GeminiUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/nvkob1/rbxscripts/refs/heads/main/UILibraryByGemini/GeminiUILibrary.lua"))()
 
 local Window = GeminiUI:CreateWindow({
     Name = "Gemini Hub - Example",
