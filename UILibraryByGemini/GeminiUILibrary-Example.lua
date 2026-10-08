@@ -2,9 +2,25 @@
 -- If you hosted it online, use:
 local GeminiUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/nvkob1/rbxscripts/refs/heads/main/UILibraryByGemini/GeminiUILibrary.lua"))()
 
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local UserInputService = game:GetService("UserInputService")
+
+local Device;
+function checkDevice()
+    if LocalPlayer then
+        if UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled then
+            Device = UDim2.new(0, 500, 0, 320)
+        else
+            Device = UDim2.new(0, 500, 0, 400)
+        end
+    end
+end
+checkDevice()
+
 local Window = GeminiUI:CreateWindow({
     Name = "Gemini Hub - Example",
-    Size = UDim2.new(0, 500, 0, 400),
+    Size = Device,
     ThemeColor = Color3.fromRGB(255, 85, 127), -- Pinkish theme
     ToggleKey = Enum.KeyCode.RightControl -- Default key to toggle the UI visibility (PC)
 })
