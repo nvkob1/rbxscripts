@@ -85,6 +85,40 @@ PlayerTab:CreateDropdown({
     end
 })
 
+-- Dynamic Inventory / Weapon Dropdown with AutoRefresh
+local function GetWeapons()
+    local items = {}
+    local backpack = LocalPlayer:FindFirstChild("Backpack")
+    if backpack then
+        for _, v in ipairs(backpack:GetChildren()) do
+            if v:IsA("Tool") then
+                table.insert(items, v.Name)
+            end
+        end
+    end
+
+    if LocalPlayer.Character then
+        for _, v in ipairs(LocalPlayer.Character:GetChildren()) do
+            if v:IsA("Tool") and not table.find(items, v.Name) then
+                table.insert(items, v.Name)
+            end
+        end
+    end
+
+    return items
+end
+
+PlayerTab:CreateDropdown({
+    Name = "Select Weapon",
+    Options = GetWeapons, -- Pass function reference directly without parentheses
+    AutoRefresh = true,   -- Automatically refreshes when Backpack or Character tools change
+    Default = getgenv().Weapon or "",
+    Callback = function(selectedOption)
+        getgenv().Weapon = selectedOption
+        print("Selected Weapon:", selectedOption)
+    end
+})
+
 -- == Settings Tab ==
 SettingsTab:CreateKeybind({
     Name = "UI Toggle Key",
