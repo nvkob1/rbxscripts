@@ -143,8 +143,9 @@ function Gemini:CreateWindow(options)
     MobileToggle.Name = "MobileToggle"
     MobileToggle.Parent = screenGui
     MobileToggle.BackgroundColor3 = ThemeColor
-    MobileToggle.Position = UDim2.new(0.5, -25, 0, 20)
-    MobileToggle.Size = UDim2.new(0, 50, 0, 50)
+    MobileToggle.AnchorPoint = Vector2.new(0.5, 0)
+    MobileToggle.Position = UDim2.new(0.5, 0, 0, -50)
+    MobileToggle.Size = UDim2.new(1, 0, 0, 16)
     MobileToggle.Font = Enum.Font.GothamBold
     MobileToggle.Text = WindowName:sub(1,1)
     MobileToggle.TextColor3 = Color3.fromRGB(255, 255, 255)
