@@ -540,7 +540,8 @@ function Gemini:CreateWindow(options)
             options = options or {}
             local keyName = options.Name or "Keybind"
             local defaultKey = options.Default or Enum.KeyCode.RightControl
-            local keyCallback = options.Callback or function() end
+            local keyCallback = options.Callback or options.OnChanged or function() end
+            local keyPressed = options.OnPressed or options.Pressed
 
             local currentKey = defaultKey
             local IsBinding = false
@@ -600,7 +601,9 @@ function Gemini:CreateWindow(options)
                     end
                 else
                     if not gameProcessed and input.KeyCode == currentKey then
-                        pcall(keyCallback, currentKey)
+                        if keyPressed then
+                            pcall(keyPressed, currentKey)
+                        end
                     end
                 end
             end)
