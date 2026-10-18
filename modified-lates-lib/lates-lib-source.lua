@@ -205,7 +205,7 @@ end
 --// Setup [UI]
 if (identifyexecutor) then
 	Screen = Services.Insert:LoadLocalAsset("rbxassetid://18490507748");
-	Blur = loadstring(game:HttpGet("https://raw.githubusercontent.com/nvkob1/rbxscripts/refs/heads/main/modified-lates-lib/Assets/blur.lua"))();
+	Blur = loadstring(game:HttpGet("https://raw.githubusercontent.com/nvkob1/rbxscripts/refs/heads/main/modified-lates-lib/Assets/blur.lua?token=GHSAT0AAAAAAEKZA7FNRDLKNU3HLXIKTMLG2WUYWNA"))();
 else
 	Screen = (script.Parent);
 	Blur = require(script.Blur)
@@ -374,13 +374,12 @@ function Library:CreateWindow(Settings: { Title: string, Size: UDim2, Transparen
 		Setup.Keybind = Settings.MinimizeKeybind
 	end
 
-	local cursorConnection
 	if Settings.ForceCursorShow then
 		local UIS = GetService(game, "UserInputService")
 		local RS = GetService(game, "RunService")
 		local GS = GetService(game, "GuiService")
 		
-		cursorConnection = Connect(RS.RenderStepped, function()
+		Connect(RS.RenderStepped, function()
 			local mpos = UIS:GetMouseLocation()
 			local inset = GS:GetGuiInset()
 			local isHovering = false
@@ -463,7 +462,7 @@ function Library:CreateWindow(Settings: { Title: string, Size: UDim2, Transparen
 		end
 	end
 
-	local keybindConnection = Services.Input.InputBegan:Connect(function(Input, Focused) 
+	Services.Input.InputBegan:Connect(function(Input, Focused) 
 		if (Input == Setup.Keybind or Input.KeyCode == Setup.Keybind) and not Focused then
 			Close()
 		end
@@ -1316,66 +1315,6 @@ function Library:CreateWindow(Settings: { Title: string, Size: UDim2, Transparen
 		end
 	end
 
-	function Options:Destroy()
-		if Options._Cleanup then
-			pcall(Options._Cleanup)
-		end
-
-		if cursorConnection then
-			cursorConnection:Disconnect()
-			cursorConnection = nil
-			pcall(function()
-				GetService(game, "UserInputService").MouseIconEnabled = true
-			end)
-		end
-
-		if keybindConnection then
-			keybindConnection:Disconnect()
-			keybindConnection = nil
-		end
-
-		if Blurs[Settings.Title] and Blurs[Settings.Title].root then
-			pcall(function()
-				Blurs[Settings.Title].root:Destroy()
-			end)
-			Blurs[Settings.Title] = nil
-		end
-
-		if Options.ToggleGui then
-			pcall(function()
-				Options.ToggleGui:Destroy()
-			end)
-			Options.ToggleGui = nil
-		end
-
-		pcall(function()
-			local hiddenUI = gethui and gethui() or game:GetService("CoreGui")
-			local existingToggle = hiddenUI:FindFirstChild("nvkob1ToggleButton")
-			if existingToggle then
-				existingToggle:Destroy()
-			end
-		end)
-
-		pcall(function()
-			local existingToggle = Player.GUI:FindFirstChild("nvkob1ToggleButton")
-			if existingToggle then
-				existingToggle:Destroy()
-			end
-		end)
-
-		if Window then
-			pcall(function()
-				Window:Destroy()
-			end)
-		end
-
-		if Screen then
-			pcall(function()
-				Screen:Destroy()
-			end)
-		end
-	end
-
 	function Options:BuildSettingsSection(Tab, Themes)
 		local Players = game:GetService("Players")
 		local LocalPlayer = Players.LocalPlayer
@@ -1448,11 +1387,6 @@ function Library:CreateWindow(Settings: { Title: string, Size: UDim2, Transparen
 				autoRejoinConnection:Disconnect()
 				autoRejoinConnection = nil
 			end
-		end
-
-		Options._Cleanup = function()
-			DisableAntiAfk()
-			DisableAutoRejoin()
 		end
 
 		Options:AddToggle({
@@ -1565,15 +1499,6 @@ function Library:CreateWindow(Settings: { Title: string, Size: UDim2, Transparen
 			end,
 		})
 
-		Options:AddButton({
-			Title = "Destroy UI",
-			Description = "Completely remove UI and Toggle Button.",
-			Tab = Tab,
-			Callback = function() 
-				Options:Destroy()
-			end,
-		})
-
 		Options:AddSection({ Name = "Config", Tab = Tab })
 
 		Options:AddToggle({
@@ -1617,7 +1542,6 @@ function Library:CreateWindow(Settings: { Title: string, Size: UDim2, Transparen
 		ToggleGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 		ToggleGui.DisplayOrder = 999999
 		ToggleGui.Parent = hiddenUI
-		Options.ToggleGui = ToggleGui
 
 		local ToggleButton = Instance.new("ImageButton")
 		ToggleButton.Size = UDim2.new(0, 65, 0, 65) 
