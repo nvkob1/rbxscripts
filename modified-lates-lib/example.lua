@@ -4,7 +4,7 @@ getgenv().AutoSave = true
 --// Services
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
-local UserInputService = game:GetService("UserInputService");
+local UserInputService = game:GetService("UserInputService")
 local TeleportService = game:GetService("TeleportService")
 local GuiService = game:GetService("GuiService")
 local VirtualUser = game:GetService("VirtualUser")
@@ -26,11 +26,13 @@ checkDevice()
 --// Library
 local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/nvkob1/rbxscripts/refs/heads/main/modified-lates-lib/lates-lib-source.lua"))()
 local Window = Library:CreateWindow({
-	Title = "???",
+	Title = "LatesLibs",
 	Theme = "Dark",
 	Size = Device,
 	Transparency = 0,
 	Blurring = false,
+	DropdownSearch = true,
+    ForceCursorShow = false,   -- Force Show Roblox Cursor When Cursor at UI
 	MinimizeKeybind = Enum.KeyCode.RightControl,
 	Folder = "lates-libs-example",
 	FileName = LocalPlayer.Name..".json",
@@ -126,26 +128,32 @@ local Main = Window:AddTab({
 Window:AddSection({ Name = "Non Interactable", Tab = Main }) 
 
 
-Window:AddParagraph({
-	Title = "Paragraph",
-	Description = "Insert any important text here.",
+local StatusParagraph = Window:AddParagraph({
+	Title = "Status",
+	Description = "Waiting for action...",
 	Tab = Main
-}) 
+})
 
 Window:AddSection({ Name = "Interactable", Tab = Main }) 
 
+local clickCount = 0
+local messages = {
+	{ title = "Status", desc = "Waiting for action..." },
+	{ title = "Status — Active!", desc = "Button was clicked once." },
+	{ title = "Status — Running!", desc = "Something is happening right now..." },
+	{ title = "Status — Done!", desc = "All finished. Click again to reset." },
+}
+
 Window:AddButton({
-	Title = "Button",
-	Description = "I wonder what this does",
+	Title = "Update Paragraph",
+	Description = "Click to change the paragraph text above",
 	Tab = Main,
-	Callback = function() 
-		Window:Notify({
-			Title = "hi",
-			Description = "i'm a notification", 
-			Duration = 5
-		})
+	Callback = function()
+		clickCount = (clickCount % #messages) + 1
+		local msg = messages[clickCount]
+		StatusParagraph:Set(msg.title, msg.desc)
 	end,
-}) 
+})
 
 Window:AddSlider({
 	Title = "Slider",
@@ -212,221 +220,7 @@ local Settings = Window:AddTab({
 	Icon = "rbxassetid://11293977610",
 })
 
-Window:AddSection({ Name = "Server", Tab = Settings }) 
-
-local function rejoin()
-	if #Players:GetPlayers() <= 1 then
-		Players.LocalPlayer:Kick("\nRejoining...")
-		wait()
-		TeleportService:Teleport(game.PlaceId, Players.LocalPlayer)
-	else
-		TeleportService:TeleportToPlaceInstance(game.PlaceId, game.JobId, Players.LocalPlayer)
-	end
-end
-
-function ServerHop()
-	local placeId = game.PlaceId
-	local success, servers = pcall(function()
-		return HttpService:JSONDecode(
-			game:HttpGet("https://games.roblox.com/v1/games/" .. placeId .. "/servers/Public?sortOrder=Asc&limit=100")
-		).data
-	end)
-
-	if success and servers then
-		local validServers = {}
-		for _, server in ipairs(servers) do
-			if server.playing < server.maxPlayers and server.id ~= game.JobId then
-				table.insert(validServers, server)
-			end
-		end
-
-		if #validServers > 0 then
-			local chosenServer = validServers[math.random(1, #validServers)]
-			TeleportService:TeleportToPlaceInstance(placeId, chosenServer.id, LocalPlayer)
-		else
-			TeleportService:Teleport(placeId, LocalPlayer)
-		end
-	else
-		TeleportService:Teleport(placeId, LocalPlayer)
-	end
-end
-
-local antiAfkConnection
-local function EnableAntiAfk()
-    antiAfkConnection = LocalPlayer.Idled:Connect(function()
-        VirtualUser:CaptureController()
-        VirtualUser:ClickButton2(Vector2.new())
-    end)
-end
-local function DisableAntiAfk()
-    if antiAfkConnection then
-        antiAfkConnection:Disconnect()
-        antiAfkConnection = nil
-    end
-end
-
-local autoRejoinConnection
-local function EnableAutoRejoin()
-	autoRejoinConnection = GuiService.ErrorMessageChanged:Connect(function()
-		rejoin()
-	end)
-end
-local function DisableAutoRejoin()
-	if autoRejoinConnection then
-		autoRejoinConnection:Disconnect()
-		autoRejoinConnection = nil
-	end
-end
-
-Window:AddToggle({
-	Title = "Anti-Afk",
-	Description = "No more AFK kick.",
-	Default = true,
-	Tab = Settings,
-	Callback = function(Boolean) 
-		if Boolean then
-			EnableAntiAfk()
-		else
-			DisableAntiAfk()
-		end
-	end,
-}) 
-EnableAntiAfk()
-Window:AddToggle({
-	Title = "Auto Rejoin",
-	Description = "Automatic Rejoin When Disconnected.",
-	Default = true,
-	Tab = Settings,
-	Callback = function(Boolean) 
-		if Boolean then
-			EnableAutoRejoin()
-		else
-			DisableAutoRejoin()
-		end
-	end,
-}) 
-EnableAutoRejoin()
-Window:AddButton({
-	Title = "Rejoin",
-	Description = "Rejoin current server.",
-	Tab = Settings,
-	Callback = function() 
-		rejoin()
-	end,
-})
-Window:AddButton({
-	Title = "Server Hop",
-	Description = "Join another server.",
-	Tab = Settings,
-	Callback = function() 
-		ServerHop()
-	end,
-})
-Window:AddButton({
-	Title = "Infinite Yield",
-	Description = "Admin commands script.",
-	Tab = Settings,
-	Callback = function() 
-		loadstring(game:HttpGet("https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source"))()
-	end,
-}) 
-
-
-Window:AddSection({ Name = "UI", Tab = Settings }) 
-
-Window:AddKeybind({
-	Title = "Minimize Keybind",
-	Description = "Set the keybind for Minimizing",
-	Tab = Settings,
-	Default = Enum.KeyCode.RightControl,
-	Callback = function(Key) 
-		Window:SetSetting("Keybind", Key)
-	end,
-}) 
-
-Window:AddDropdown({
-	Title = "Set Theme",
-	Description = "Set the theme of the library!",
-	Tab = Settings,
-	Options = {
-		["Light Mode"] = "Light",
-		["Dark Mode"] = "Dark",
-		["Extra Dark"] = "Void",
-	},
-	Default = "Dark Mode",
-	Flag = "Theme",
-	Callback = function(Theme) 
-		Window:SetTheme(Themes[Theme])
-	end,
-}) 
-
-Window:AddToggle({
-	Title = "UI Blur",
-	Description = "If enabled, must have your Roblox graphics set to 8+ for it to work",
-	Default = false,
-	Flag = "Blur",
-	Tab = Settings,
-	Callback = function(Boolean) 
-		Window:SetSetting("Blur", Boolean)
-	end,
-}) 
-
-
-Window:AddSlider({
-	Title = "UI Transparency",
-	Description = "Set the transparency of the UI",
-	Tab = Settings,
-	AllowDecimals = true,
-	MaxValue = 1,
-	Default = 0,
-	Flag = "Transparency",
-	Callback = function(Amount) 
-		Window:SetSetting("Transparency", Amount)
-	end,
-})
-
-Window:AddSection({ Name = "Config", Tab = Settings })
-
-Window:AddToggle({
-	Title = "Auto Save",
-	Description = "Automatically saves settings.",
-	Default = true,
-	Tab = Settings,
-	Callback = function(Boolean)
-		getgenv().AutoSave = Boolean
-		if Boolean then
-			task.spawn(function()
-				while getgenv().AutoSave do
-					task.wait(1)
-					if getgenv().AutoSave then
-						Window:SaveConfig()
-					end
-				end
-			end)
-		end
-	end,
-})
-if getgenv().AutoSave then
-	task.spawn(function()
-		while getgenv().AutoSave do
-			task.wait(1)
-			if getgenv().AutoSave then
-				Window:SaveConfig()
-			end
-		end
-	end)
-end
-
-Window:AddButton({
-	Title = "Save Settings",
-	Description = "Manually save current settings.",
-	Tab = Settings,
-	Callback = function()
-		Window:SaveConfig()
-	end,
-})
-
--- Load Config
+Window:BuildSettingsSection(Settings, Themes)
 Window:LoadConfig() 
 
 Window:Notify({
@@ -434,10 +228,3 @@ Window:Notify({
 	Description = "Press Left Alt to Minimize and Open the tab!", 
 	Duration = 10
 })
-
---// Keybind Example
-UserInputService.InputBegan:Connect(function(Key) 
-	if Key == Keybind then
-		warn("You have pressed the minimize keybind!");
-	end
-end)
